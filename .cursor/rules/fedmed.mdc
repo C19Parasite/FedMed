@@ -1,0 +1,31 @@
+---
+description: FedMed project conventions, always apply
+alwaysApply: true
+---
+
+# FedMed: cross-silo federated learning for brain tumor MRI segmentation
+Stack: Python 3.10+, PyTorch, MONAI, Flower (flwr). TenSEAL, DP, FastAPI and the
+React dashboard are later-week features and must remain OPTIONAL imports.
+
+## Canonical layout
+- fedmed/data/      datasets, transforms, partitioning
+- fedmed/models/    network definitions
+- fedmed/training/  trainer, losses, metrics
+- fedmed/fl/        Flower server, clients, strategies  (canonical FL code)
+- fedmed/utils/     seeding, logging, config loading
+- configs/          YAML only; scripts/ for CLI entry points; tests/ for pytest
+
+## Rules
+1. Extend existing modules. Never rewrite working code. If an interface must
+   change, state it before changing it.
+2. Every hyperparameter and path comes from YAML configs. Nothing hardcoded.
+3. Seed everything via fedmed.utils.seeding.seed_everything and log the seed.
+4. Type hints and docstrings on public functions. PEP8.
+5. Never commit, log, or print raw patient data, NIfTI/DICOM contents, or
+   patient-identifying file paths.
+6. The baseline and plain FedAvg path must run with only torch, monai and flwr
+   installed. Do not import tenseal, the DP engine or FastAPI there.
+7. Use GroupNorm/InstanceNorm, not BatchNorm, in any model used for federation.
+8. After each task: run `pytest`, run the relevant smoke test, then give a short
+   summary of what changed, how to run it, and any assumptions.
+9. If a requirement is ambiguous, state the assumption and proceed.
