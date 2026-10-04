@@ -1,0 +1,71 @@
+# FedMed Baseline Configuration (Week 1)
+# Cross-silo brain tumor MRI segmentation baseline config
+
+seed: 42
+
+data:
+  source: "synthetic"           # "synthetic", "decathlon", or "brats_local"
+  root_dir: "data"
+  task: "Task01_BrainTumour"
+  download: false
+  label_scheme: "auto"          # "auto", "msd", or "brats"
+  label_maps:
+    msd:
+      tc: [2, 3]
+      wt: [1, 2, 3]
+      et: [2]
+    brats:
+      tc: [1, 4]
+      wt: [1, 2, 4]
+      et: [4]
+  splits_path: "data/splits.json"
+  metadata_path: "data/metadata.json"
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+  dataset_type: "cache"         # "cache", "persistent", or "plain"
+  cache_rate: 1.0
+  cache_dir: "data/cache"
+  roi_size: [64, 64, 64]
+  num_samples: 2
+  pos: 1.0
+  neg: 1.0
+  spacing: [1.0, 1.0, 1.0]
+  orientation: "RAS"
+  batch_size: 2
+  val_batch_size: 1
+  test_batch_size: 1
+  num_workers: 0
+  pin_memory: false
+  flip_prob: 0.5
+  scale_intensity_factor: 0.1
+  shift_intensity_offset: 0.1
+  synthetic:
+    num_patients: 10
+    spatial_size: [64, 64, 64]
+
+model:
+  name: "UNet3D"
+  in_channels: 4
+  out_channels: 3
+  channels: [16, 32, 64, 128]
+  strides: [2, 2, 2]
+  norm: "INSTANCE"
+  dropout: 0.1
+
+training:
+  epochs: 5
+  lr: 0.0002
+  weight_decay: 0.00001
+  loss: "dice_ce"
+  val_interval: 1
+  save_dir: "checkpoints"
+  device: "cpu"
+
+logging:
+  log_file: "outputs/fedmed.log"
+  level: "INFO"
+  tensorboard_dir: "runs/baseline"
+
+output:
+  viz_path: "outputs/slice_montage.png"
