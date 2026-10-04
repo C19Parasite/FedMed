@@ -1,0 +1,49 @@
+# FedMed .gitignore
+# HIPAA / GDPR: Never commit raw patient data, imaging files, or patient-identifying paths
+
+# Patient data and raw imaging files (root data directory only)
+/data/
+*.nii
+*.nii.gz
+*.dcm
+*.dicom
+*.ima
+*.mha
+*.nrrd
+
+# Model checkpoints and weights
+/checkpoints/
+*.pt
+*.pth
+
+# Tensorboard runs and training outputs
+/runs/
+/outputs/
+
+# Python virtual environments
+.venv/
+venv/
+env/
+.env
+.env.*
+
+# Python bytecode and build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# Testing and linters
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Cache directories
+/cache/
+.cache/
+.monai/
+
+# Visualization outputs
+*.png

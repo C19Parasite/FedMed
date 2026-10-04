@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fedmed"
+version = "0.1.0"
+description = "Cross-silo federated learning for brain tumor MRI segmentation"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch",
+    "monai",
+    "flwr",
+    "numpy",
+    "pandas",
+    "pyyaml",
+    "scikit-learn",
+    "tensorboard",
+    "matplotlib",
+    "nibabel",
+    "einops",
+    "tqdm",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+include = ["fedmed*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
