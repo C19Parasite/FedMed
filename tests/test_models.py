@@ -10,7 +10,7 @@ from fedmed.models.norm import (
     validate_group_norm_channels,
     validate_roi_for_model,
 )
-from fedmed.models.unet3d import UNet3D, get_model
+from fedmed.models.unet3d import UNet3D, UNet3DCustom, get_model
 from fedmed.utils.config import load_config
 
 
@@ -105,3 +105,42 @@ def test_get_norm_layer_spec_rejects_batchnorm() -> None:
 
     with pytest.raises(ValueError, match="prohibited"):
         get_norm_layer_spec({"type": "batch"})
+
+
+def test_unet3d_custom_forward_pass_shape() -> None:
+    """Verify UNet3DCustom reference architecture produces correct output tensor shape."""
+    model = UNet3DCustom(
+        in_channels=4,
+        out_channels=3,
+        channels=[8, 16, 32],
+        strides=[2, 2],
+        norm_type="instance",
+        use_residual=True,
+    )
+    assert_no_batchnorm(model)
+    x = torch.randn(1, 4, 16, 16, 16)
+    out = model(x)
+    assert out.shape == (1, 3, 16, 16, 16)
+
+
+def test_unet3d_custom_rejects_batchnorm() -> None:
+    """Verify UNet3DCustom strictly rejects BatchNorm with clear ValueError."""
+    with pytest.raises(ValueError, match="BatchNorm is prohibited"):
+        UNet3DCustom(norm_type="batch")
+
+
+def test_unet3d_custom_group_norm_and_no_residual() -> None:
+    """Verify UNet3DCustom works with GroupNorm and without residual connections."""
+    model = UNet3DCustom(
+        in_channels=4,
+        out_channels=3,
+        channels=[8, 16],
+        strides=[2],
+        norm_type="group",
+        num_groups=4,
+        use_residual=False,
+    )
+    assert_no_batchnorm(model)
+    x = torch.randn(2, 4, 16, 16, 16)
+    out = model(x)
+    assert out.shape == (2, 3, 16, 16, 16)
