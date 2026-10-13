@@ -26,7 +26,7 @@ data:
   dataset_type: "cache"         # "cache", "persistent", or "plain"
   cache_rate: 1.0
   cache_dir: "data/cache"
-  roi_size: [64, 64, 64]
+  roi_size: [96, 96, 96]
   num_samples: 2
   pos: 1.0
   neg: 1.0
@@ -45,13 +45,51 @@ data:
     spatial_size: [64, 64, 64]
 
 model:
-  name: "UNet3D"
+  name: "monai_unet"            # "monai_unet", "segresnet", "dynunet", "unet3d_custom"
   in_channels: 4
   out_channels: 3
-  channels: [16, 32, 64, 128]
-  strides: [2, 2, 2]
-  norm: "INSTANCE"
+  channels: [16, 32, 64, 128, 256]
+  strides: [2, 2, 2, 2]
+  num_res_units: 2
+  kernel_size: 3
+  act: "PRELU"
   dropout: 0.1
+  norm:
+    type: "group"               # "group" or "instance"; "batch" is banned
+    num_groups: 8
+  init:
+    name: "kaiming"             # "kaiming", "xavier", or "none"
+  # DynUNet-specific
+  deep_supervision: false
+  deep_supr_num: 1
+  # SegResNet-specific
+  init_filters: 16
+  blocks_down: [1, 2, 2, 4]
+  blocks_up: [1, 1, 1]
+  # Custom UNet-specific
+  depth: 4
+  base_channels: 16
+  use_residual: true
+
+loss:
+  name: "dice_ce"               # "dice_ce", "dice_focal", "dice"
+  lambda_dice: 1.0
+  lambda_ce: 1.0
+  lambda_focal: 1.0
+  gamma: 2.0
+  smooth_nr: 1.0e-5
+  smooth_dr: 1.0e-5
+  batch: true                   # Compute Dice over the batch dimension
+  channel_weights: [1.0, 1.0, 1.0]   # Per-channel weights for TC, WT, ET
+
+metrics:
+  threshold: 0.5
+  empty_policy: "brats"         # "brats" or "skip"
+  hd95:
+    enabled: true
+    every_n_epochs: 5
+  max_hd95: 373.13              # Diagonal of 240x240x155 BraTS volume in mm
+  spacing: [1.0, 1.0, 1.0]
 
 training:
   epochs: 5

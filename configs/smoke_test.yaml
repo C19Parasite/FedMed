@@ -1,0 +1,106 @@
+# FedMed – Smoke Test Configuration
+# Tiny configuration for fast CI / unit testing (CPU-friendly)
+
+seed: 42
+
+data:
+  source: "synthetic"
+  root_dir: "data"
+  task: "Task01_BrainTumour"
+  download: false
+  label_scheme: "auto"
+  label_maps:
+    msd:
+      tc: [2, 3]
+      wt: [1, 2, 3]
+      et: [2]
+    brats:
+      tc: [1, 4]
+      wt: [1, 2, 4]
+      et: [4]
+  splits_path: "data/splits.json"
+  metadata_path: "data/metadata.json"
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+  dataset_type: "cache"
+  cache_rate: 1.0
+  cache_dir: "data/cache"
+  roi_size: [16, 16, 16]
+  num_samples: 1
+  pos: 1.0
+  neg: 1.0
+  spacing: [1.0, 1.0, 1.0]
+  orientation: "RAS"
+  batch_size: 1
+  val_batch_size: 1
+  test_batch_size: 1
+  num_workers: 0
+  pin_memory: false
+  flip_prob: 0.0
+  scale_intensity_factor: 0.0
+  shift_intensity_offset: 0.0
+  synthetic:
+    num_patients: 4
+    spatial_size: [16, 16, 16]
+
+model:
+  name: "monai_unet"
+  in_channels: 4
+  out_channels: 3
+  channels: [4, 8, 16]
+  strides: [2, 2]
+  num_res_units: 0
+  kernel_size: 3
+  act: "PRELU"
+  dropout: 0.0
+  norm:
+    type: "group"
+    num_groups: 4
+  init:
+    name: "kaiming"
+  deep_supervision: false
+  deep_supr_num: 1
+  init_filters: 4
+  blocks_down: [1, 1, 1]
+  blocks_up: [1, 1]
+  depth: 2
+  base_channels: 4
+  use_residual: false
+
+loss:
+  name: "dice_ce"
+  lambda_dice: 1.0
+  lambda_ce: 1.0
+  lambda_focal: 1.0
+  gamma: 2.0
+  smooth_nr: 1.0e-5
+  smooth_dr: 1.0e-5
+  batch: false
+  channel_weights: [1.0, 1.0, 1.0]
+
+metrics:
+  threshold: 0.5
+  empty_policy: "brats"
+  hd95:
+    enabled: false
+    every_n_epochs: 5
+  max_hd95: 373.13
+  spacing: [1.0, 1.0, 1.0]
+
+training:
+  epochs: 1
+  lr: 0.0002
+  weight_decay: 0.00001
+  loss: "dice_ce"
+  val_interval: 1
+  save_dir: "checkpoints"
+  device: "cpu"
+
+logging:
+  log_file: "outputs/fedmed_smoke.log"
+  level: "INFO"
+  tensorboard_dir: "runs/smoke"
+
+output:
+  viz_path: "outputs/slice_montage_smoke.png"
