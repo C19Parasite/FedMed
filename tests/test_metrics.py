@@ -122,3 +122,74 @@ def test_threshold_sensitivity() -> None:
     m_high.update(logits, target)
     res_high = m_high.compute()
     assert res_high["dice_mean"] == 0.0
+
+
+from fedmed.training.metrics import hd95_per_channel
+
+
+def test_hd95_identical_masks_is_zero() -> None:
+    """Verify HD95 of identical masks is exactly 0.0."""
+    mask = torch.zeros(1, 3, 16, 16, 16)
+    mask[0, :, 4:10, 4:10, 4:10] = 1.0
+
+    scores = hd95_per_channel(mask, mask)
+    assert scores.shape == (1, 3)
+    assert torch.allclose(scores, torch.zeros(1, 3))
+
+
+def test_hd95_shifted_cube_equals_3() -> None:
+    """Verify HD95 of a cube shifted by exactly 3 voxels along one axis equals 3.0."""
+    target = torch.zeros(1, 3, 20, 20, 20)
+    target[0, :, 4:10, 4:10, 4:10] = 1.0
+
+    # Shift pred by 3 voxels along depth axis (x-axis)
+    pred = torch.zeros(1, 3, 20, 20, 20)
+    pred[0, :, 7:13, 4:10, 4:10] = 1.0
+
+    scores = hd95_per_channel(pred, target, spacing=[1.0, 1.0, 1.0])
+    for c in range(3):
+        assert pytest.approx(scores[0, c].item(), abs=1e-3) == 3.0
+
+
+def test_hd95_empty_policy_and_cap() -> None:
+    """Verify HD95 empty policy: both empty is 0.0 under brats; mismatch capped at max_hd95."""
+    pred = torch.zeros(2, 3, 10, 10, 10)
+    target = torch.zeros(2, 3, 10, 10, 10)
+
+    # Vol 0: both empty for all channels
+    # Vol 1: pred has tumor, target is empty
+    pred[1, 0, 2:5, 2:5, 2:5] = 1.0
+
+    cap = 373.13
+    scores = hd95_per_channel(pred, target, max_hd95=cap, empty_policy="brats")
+
+    # Vol 0 (both empty) -> 0.0
+    assert scores[0, 0].item() == 0.0
+    # Vol 1 (mismatched empty GT) -> capped at 373.13
+    assert pytest.approx(scores[1, 0].item(), abs=1e-3) == cap
+
+    # Under skip policy -> NaN for empty GT
+    scores_skip = hd95_per_channel(pred, target, max_hd95=cap, empty_policy="skip")
+    assert torch.isnan(scores_skip[0, 0])
+    assert torch.isnan(scores_skip[1, 0])
+
+
+def test_segmentation_metrics_compute_with_hd95() -> None:
+    """Verify SegmentationMetrics.compute(include_hd95=True) returns all HD95 keys within range."""
+    logits = torch.randn(2, 3, 16, 16, 16)
+    labels = (torch.rand(2, 3, 16, 16, 16) > 0.5).float()
+
+    metrics = SegmentationMetrics(threshold=0.5, empty_policy="brats")
+    metrics.update(logits, labels)
+
+    # Without HD95
+    res_no_hd = metrics.compute(include_hd95=False)
+    assert "dice_tc" in res_no_hd
+    assert "hd95_tc" not in res_no_hd
+
+    # With HD95
+    res_with_hd = metrics.compute(include_hd95=True)
+    for k in ["hd95_tc", "hd95_wt", "hd95_et", "hd95_mean"]:
+        assert k in res_with_hd
+        val = res_with_hd[k]
+        assert 0.0 <= val <= metrics.max_hd95
