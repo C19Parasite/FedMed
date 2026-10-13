@@ -1,5 +1,6 @@
-"""Network definitions and utilities for FedMed."""
+"""Network definitions, factories, and utilities for FedMed."""
 
+from fedmed.models.factory import build_model
 from fedmed.models.norm import (
     assert_no_batchnorm,
     get_norm_layer_spec,
@@ -12,6 +13,7 @@ __all__ = [
     "UNet3D",
     "UNet3DCustom",
     "assert_no_batchnorm",
+    "build_model",
     "get_model",
     "get_norm_layer_spec",
     "validate_group_norm_channels",
