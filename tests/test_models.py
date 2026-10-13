@@ -2,7 +2,14 @@
 
 import pytest
 import torch
+import torch.nn as nn
 
+from fedmed.models.norm import (
+    assert_no_batchnorm,
+    get_norm_layer_spec,
+    validate_group_norm_channels,
+    validate_roi_for_model,
+)
 from fedmed.models.unet3d import UNet3D, get_model
 from fedmed.utils.config import load_config
 
@@ -37,3 +44,64 @@ def test_get_model_from_config() -> None:
     with torch.no_grad():
         out = model(x)
     assert out.shape == (1, 3, 32, 32, 32)
+
+
+def test_assert_no_batchnorm_passes_on_clean_model() -> None:
+    """Verify assert_no_batchnorm succeeds when model uses only Instance/Group norms."""
+    clean_model = nn.Sequential(
+        nn.Conv3d(4, 16, 3, padding=1),
+        nn.InstanceNorm3d(16),
+        nn.ReLU(),
+        nn.Conv3d(16, 16, 3, padding=1),
+        nn.GroupNorm(4, 16),
+    )
+    assert_no_batchnorm(clean_model)
+
+
+def test_assert_no_batchnorm_fails_on_batchnorm_layer() -> None:
+    """Verify assert_no_batchnorm raises ValueError with details on model containing BatchNorm3d."""
+    dirty_model = nn.Sequential(
+        nn.Conv3d(4, 16, 3, padding=1),
+        nn.BatchNorm3d(16),
+        nn.ReLU(),
+    )
+    with pytest.raises(ValueError, match="BatchNorm is strictly prohibited"):
+        assert_no_batchnorm(dirty_model)
+
+
+def test_validate_roi_for_model_success() -> None:
+    """Verify validate_roi_for_model passes when ROI is divisible by total downsampling."""
+    cfg = {
+        "data": {"roi_size": [64, 64, 64]},
+        "model": {"strides": [2, 2, 2, 2]},  # product = 16. 64 % 16 == 0
+    }
+    validate_roi_for_model(cfg)
+
+
+def test_validate_roi_for_model_failure() -> None:
+    """Verify validate_roi_for_model raises ValueError when any dimension is not divisible."""
+    cfg = {
+        "data": {"roi_size": [64, 50, 64]},
+        "model": {"strides": [2, 2, 2, 2]},  # product = 16. 50 % 16 != 0
+    }
+    with pytest.raises(ValueError, match="ROI dimensions must each be divisible"):
+        validate_roi_for_model(cfg)
+
+
+def test_validate_group_norm_channels() -> None:
+    """Verify validate_group_norm_channels ensures channels are divisible by num_groups."""
+    # Valid: 16, 32, 64 all divisible by 8
+    validate_group_norm_channels([16, 32, 64], 8)
+
+    # Invalid: 18 not divisible by 8
+    with pytest.raises(ValueError, match="does not divide all channel widths"):
+        validate_group_norm_channels([16, 18, 64], 8)
+
+
+def test_get_norm_layer_spec_rejects_batchnorm() -> None:
+    """Verify get_norm_layer_spec raises ValueError when BatchNorm is configured."""
+    with pytest.raises(ValueError, match="prohibited"):
+        get_norm_layer_spec("batch")
+
+    with pytest.raises(ValueError, match="prohibited"):
+        get_norm_layer_spec({"type": "batch"})
