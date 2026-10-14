@@ -24,7 +24,7 @@ from fedmed.training.run import (
     save_environment_info,
     save_resolved_config,
 )
-from fedmed.training.trainer import CentralizedTrainer
+from fedmed.training.trainer import CentralizedTrainer, Trainer
 
 __all__ = [
     "CentralizedTrainer",
@@ -32,6 +32,7 @@ __all__ = [
     "METRICS_CSV_COLUMNS",
     "MetricsCSVLogger",
     "SegmentationMetrics",
+    "Trainer",
     "build_loss",
     "build_optimizer",
     "build_scheduler",
