@@ -89,13 +89,63 @@ metrics:
   spacing: [1.0, 1.0, 1.0]
 
 training:
-  epochs: 1
+  epochs: 2
+  device: "cpu"
+  optimizer:
+    name: "adamw"
+    lr: 0.0002
+    weight_decay: 0.00001
+    betas: [0.9, 0.999]
+    momentum: 0.9
+    nesterov: false
+  scheduler:
+    name: "cosine"
+    warmup_epochs: 1
+    min_lr: 1.0e-6
+    poly_power: 1.0
+  amp:
+    enabled: false
+    dtype: "float16"
+  grad_clip:
+    enabled: true
+    max_norm: 1.0
+  grad_accum_steps: 1
+  val_every_n_epochs: 1
+  sliding_window:
+    roi_size: [16, 16, 16]
+    sw_batch_size: 1
+    overlap: 0.25
+    mode: "gaussian"
+    progress: false
+  early_stopping:
+    enabled: false
+    patience: 10
+    min_delta: 0.0001
+    monitor: "val_dice_mean"
+    mode: "max"
+  checkpoint:
+    dir: "checkpoints"
+    save_every_n_epochs: 1
+    keep_last_k: 2
+    save_optimizer: true
+  resume:
+    enabled: false
+    path: null
+  logging:
+    run_name: "smoke_test"
+    output_dir: "outputs/smoke_runs"
+    tensorboard: true
+    log_every_n_steps: 1
+  deterministic:
+    enabled: true
+    cudnn_benchmark: false
+  max_steps_per_epoch: 2
+  # Backwards compatibility keys
   lr: 0.0002
   weight_decay: 0.00001
   loss: "dice_ce"
   val_interval: 1
   save_dir: "checkpoints"
-  device: "cpu"
 
 logging:
   log_file: "outputs/fedmed_smoke.log"

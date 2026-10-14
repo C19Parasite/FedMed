@@ -18,6 +18,12 @@ ALLOWED_NORM_TYPES = frozenset({"group", "instance"})
 ALLOWED_LOSS_NAMES = frozenset({"dice_ce", "dice_focal", "dice"})
 ALLOWED_EMPTY_POLICIES = frozenset({"brats", "skip"})
 ALLOWED_INIT_NAMES = frozenset({"kaiming", "xavier", "none"})
+ALLOWED_OPTIMIZERS = frozenset({"adamw", "sgd", "adam"})
+ALLOWED_SCHEDULERS = frozenset({"cosine", "poly", "none"})
+ALLOWED_DEVICES = frozenset({"auto", "cpu", "cuda"})
+ALLOWED_AMP_DTYPES = frozenset({"float16", "bfloat16"})
+ALLOWED_SW_MODES = frozenset({"gaussian", "constant"})
+ALLOWED_ES_MODES = frozenset({"max", "min"})
 
 _REQUIRED_TOP = ("seed", "data", "model", "training", "logging")
 _REQUIRED_DATA = (
@@ -54,7 +60,34 @@ _REQUIRED_DATA = (
 _REQUIRED_LABEL_CHANNELS = ("tc", "wt", "et")
 _REQUIRED_SYNTHETIC = ("num_patients", "spatial_size")
 _REQUIRED_MODEL = ("name", "in_channels", "out_channels", "norm")
-_REQUIRED_TRAINING = ("epochs", "lr", "loss", "save_dir")
+_REQUIRED_TRAINING_LEGACY = ("epochs", "lr", "loss", "save_dir")
+_REQUIRED_TRAINING_KEYS = (
+    "epochs",
+    "device",
+    "optimizer",
+    "scheduler",
+    "amp",
+    "grad_clip",
+    "grad_accum_steps",
+    "val_every_n_epochs",
+    "sliding_window",
+    "early_stopping",
+    "checkpoint",
+    "resume",
+    "logging",
+    "deterministic",
+    "max_steps_per_epoch",
+)
+_REQUIRED_OPTIMIZER_KEYS = ("name", "lr", "weight_decay", "betas", "momentum", "nesterov")
+_REQUIRED_SCHEDULER_KEYS = ("name", "warmup_epochs", "min_lr", "poly_power")
+_REQUIRED_AMP_KEYS = ("enabled", "dtype")
+_REQUIRED_GRAD_CLIP_KEYS = ("enabled", "max_norm")
+_REQUIRED_SLIDING_WINDOW_KEYS = ("roi_size", "sw_batch_size", "overlap", "mode", "progress")
+_REQUIRED_EARLY_STOPPING_KEYS = ("enabled", "patience", "min_delta", "monitor", "mode")
+_REQUIRED_CHECKPOINT_KEYS = ("dir", "save_every_n_epochs", "keep_last_k", "save_optimizer")
+_REQUIRED_RESUME_KEYS = ("enabled", "path")
+_REQUIRED_TRAIN_LOGGING_KEYS = ("run_name", "output_dir", "tensorboard", "log_every_n_steps")
+_REQUIRED_DETERMINISTIC_KEYS = ("enabled", "cudnn_benchmark")
 _REQUIRED_LOGGING = ("level",)
 
 
@@ -269,7 +302,134 @@ def _validate_training(cfg: Mapping[str, Any]) -> None:
     training = cfg["training"]
     if not isinstance(training, Mapping):
         raise ConfigError("training must be a mapping")
-    _require_keys(training, _REQUIRED_TRAINING, prefix="training.")
+
+    if "optimizer" not in training:
+        _require_keys(training, _REQUIRED_TRAINING_LEGACY, prefix="training.")
+        return
+
+    _require_keys(training, _REQUIRED_TRAINING_KEYS, prefix="training.")
+
+    # Device
+    dev = training["device"]
+    if dev not in ALLOWED_DEVICES:
+        raise ConfigError(
+            f"unknown training.device '{dev}'; expected one of {sorted(ALLOWED_DEVICES)}"
+        )
+
+    # Optimizer
+    opt = training["optimizer"]
+    if not isinstance(opt, Mapping):
+        raise ConfigError("training.optimizer must be a mapping")
+    _require_keys(opt, _REQUIRED_OPTIMIZER_KEYS, prefix="training.optimizer.")
+    opt_name = str(opt["name"]).lower()
+    if opt_name not in ALLOWED_OPTIMIZERS:
+        raise ConfigError(
+            f"unknown training.optimizer.name '{opt_name}'; expected one of {sorted(ALLOWED_OPTIMIZERS)}"
+        )
+
+    # Scheduler
+    sched = training["scheduler"]
+    if not isinstance(sched, Mapping):
+        raise ConfigError("training.scheduler must be a mapping")
+    _require_keys(sched, _REQUIRED_SCHEDULER_KEYS, prefix="training.scheduler.")
+    sched_name = str(sched["name"]).lower()
+    if sched_name not in ALLOWED_SCHEDULERS:
+        raise ConfigError(
+            f"unknown training.scheduler.name '{sched_name}'; expected one of {sorted(ALLOWED_SCHEDULERS)}"
+        )
+
+    epochs = int(training["epochs"])
+    warmup_epochs = int(sched["warmup_epochs"])
+    if warmup_epochs >= epochs and epochs > 0:
+        raise ConfigError(
+            f"training.scheduler.warmup_epochs ({warmup_epochs}) must be less than training.epochs ({epochs})"
+        )
+
+    # AMP
+    amp = training["amp"]
+    if not isinstance(amp, Mapping):
+        raise ConfigError("training.amp must be a mapping")
+    _require_keys(amp, _REQUIRED_AMP_KEYS, prefix="training.amp.")
+    amp_dtype = str(amp["dtype"]).lower()
+    if amp_dtype not in ALLOWED_AMP_DTYPES:
+        raise ConfigError(
+            f"unknown training.amp.dtype '{amp_dtype}'; expected one of {sorted(ALLOWED_AMP_DTYPES)}"
+        )
+
+    # Gradient clipping
+    grad_clip = training["grad_clip"]
+    if not isinstance(grad_clip, Mapping):
+        raise ConfigError("training.grad_clip must be a mapping")
+    _require_keys(grad_clip, _REQUIRED_GRAD_CLIP_KEYS, prefix="training.grad_clip.")
+
+    # Gradient accumulation
+    grad_accum = training["grad_accum_steps"]
+    if not isinstance(grad_accum, int) or grad_accum < 1:
+        raise ConfigError(f"training.grad_accum_steps must be an integer >= 1, got {grad_accum}")
+
+    # Sliding window
+    sw = training["sliding_window"]
+    if not isinstance(sw, Mapping):
+        raise ConfigError("training.sliding_window must be a mapping")
+    _require_keys(sw, _REQUIRED_SLIDING_WINDOW_KEYS, prefix="training.sliding_window.")
+    sw_mode = str(sw["mode"]).lower()
+    if sw_mode not in ALLOWED_SW_MODES:
+        raise ConfigError(
+            f"unknown training.sliding_window.mode '{sw_mode}'; expected one of {sorted(ALLOWED_SW_MODES)}"
+        )
+    # Check sliding window ROI divisibility by model strides product
+    sw_roi = sw["roi_size"]
+    strides = cfg.get("model", {}).get("strides")
+    if strides and isinstance(sw_roi, list) and isinstance(strides, list):
+        total_downsample = reduce(lambda a, b: a * b, strides, 1)
+        bad_dims = [(i, d) for i, d in enumerate(sw_roi) if d % total_downsample != 0]
+        if bad_dims:
+            raise ConfigError(
+                f"training.sliding_window.roi_size dimensions must be divisible by the product of "
+                f"model.strides={strides} (total downsampling factor={total_downsample}). "
+                f"Offending dimensions: {bad_dims}"
+            )
+
+    # Early stopping
+    es = training["early_stopping"]
+    if not isinstance(es, Mapping):
+        raise ConfigError("training.early_stopping must be a mapping")
+    _require_keys(es, _REQUIRED_EARLY_STOPPING_KEYS, prefix="training.early_stopping.")
+    es_mode = str(es["mode"]).lower()
+    if es_mode not in ALLOWED_ES_MODES:
+        raise ConfigError(
+            f"unknown training.early_stopping.mode '{es_mode}'; expected one of {sorted(ALLOWED_ES_MODES)}"
+        )
+
+    # Checkpoint
+    ckpt = training["checkpoint"]
+    if not isinstance(ckpt, Mapping):
+        raise ConfigError("training.checkpoint must be a mapping")
+    _require_keys(ckpt, _REQUIRED_CHECKPOINT_KEYS, prefix="training.checkpoint.")
+
+    # Resume
+    resume = training["resume"]
+    if not isinstance(resume, Mapping):
+        raise ConfigError("training.resume must be a mapping")
+    _require_keys(resume, _REQUIRED_RESUME_KEYS, prefix="training.resume.")
+    if resume["enabled"]:
+        res_path = resume["path"]
+        if res_path is None or (isinstance(res_path, str) and not res_path.strip()):
+            raise ConfigError(
+                "training.resume.path is required when training.resume.enabled is true (use 'auto' to resume latest)"
+            )
+
+    # Logging
+    log = training["logging"]
+    if not isinstance(log, Mapping):
+        raise ConfigError("training.logging must be a mapping")
+    _require_keys(log, _REQUIRED_TRAIN_LOGGING_KEYS, prefix="training.logging.")
+
+    # Deterministic
+    det = training["deterministic"]
+    if not isinstance(det, Mapping):
+        raise ConfigError("training.deterministic must be a mapping")
+    _require_keys(det, _REQUIRED_DETERMINISTIC_KEYS, prefix="training.deterministic.")
 
 
 def _validate_logging(cfg: Mapping[str, Any]) -> None:

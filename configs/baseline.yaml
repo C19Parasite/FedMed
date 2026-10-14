@@ -93,12 +93,62 @@ metrics:
 
 training:
   epochs: 5
+  device: "auto"               # "auto", "cpu", or "cuda"
+  optimizer:
+    name: "adamw"              # "adamw", "sgd", or "adam"
+    lr: 0.0002
+    weight_decay: 0.00001
+    betas: [0.9, 0.999]
+    momentum: 0.9
+    nesterov: false
+  scheduler:
+    name: "cosine"             # "cosine", "poly", or "none"
+    warmup_epochs: 1
+    min_lr: 1.0e-6
+    poly_power: 1.0
+  amp:
+    enabled: true              # auto-disabled with a warning on CPU
+    dtype: "float16"           # "float16" or "bfloat16"
+  grad_clip:
+    enabled: true
+    max_norm: 1.0
+  grad_accum_steps: 1
+  val_every_n_epochs: 1
+  sliding_window:
+    roi_size: [96, 96, 96]
+    sw_batch_size: 1
+    overlap: 0.25
+    mode: "gaussian"           # "gaussian" or "constant"
+    progress: false
+  early_stopping:
+    enabled: true
+    patience: 10
+    min_delta: 0.0001
+    monitor: "val_dice_mean"
+    mode: "max"
+  checkpoint:
+    dir: "checkpoints"
+    save_every_n_epochs: 5
+    keep_last_k: 3
+    save_optimizer: true
+  resume:
+    enabled: false
+    path: null                 # null, "auto", or explicit checkpoint path
+  logging:
+    run_name: "baseline"
+    output_dir: "outputs/runs"
+    tensorboard: true
+    log_every_n_steps: 10
+  deterministic:
+    enabled: true
+    cudnn_benchmark: false
+  max_steps_per_epoch: null
+  # Backwards compatibility keys
   lr: 0.0002
   weight_decay: 0.00001
   loss: "dice_ce"
   val_interval: 1
   save_dir: "checkpoints"
-  device: "cpu"
 
 logging:
   log_file: "outputs/fedmed.log"

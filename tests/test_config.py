@@ -97,3 +97,49 @@ def test_config_invalid_empty_policy() -> None:
     cfg["metrics"]["empty_policy"] = "ignore"
     with pytest.raises(ConfigError, match="unknown metrics.empty_policy"):
         validate_config(cfg)
+
+
+def test_config_training_validator_rules() -> None:
+    """Verify training section validator rules (optimizer, scheduler, warmup, accum, roi, resume)."""
+    # 1. Unknown optimizer
+    cfg = load_config("configs/baseline.yaml")
+    cfg["training"]["optimizer"]["name"] = "rmsprop"
+    with pytest.raises(ConfigError, match="unknown training.optimizer.name"):
+        validate_config(cfg)
+
+    # 2. Unknown scheduler
+    cfg = load_config("configs/baseline.yaml")
+    cfg["training"]["scheduler"]["name"] = "step"
+    with pytest.raises(ConfigError, match="unknown training.scheduler.name"):
+        validate_config(cfg)
+
+    # 3. Warmup epochs >= epochs
+    cfg = load_config("configs/baseline.yaml")
+    cfg["training"]["epochs"] = 5
+    cfg["training"]["scheduler"]["warmup_epochs"] = 5
+    with pytest.raises(ConfigError, match="must be less than"):
+        validate_config(cfg)
+
+    # 4. grad_accum_steps < 1
+    cfg = load_config("configs/baseline.yaml")
+    cfg["training"]["grad_accum_steps"] = 0
+    with pytest.raises(ConfigError, match="grad_accum_steps must be an integer >= 1"):
+        validate_config(cfg)
+
+    # 5. sliding_window.roi_size not divisible by model stride product
+    cfg = load_config("configs/baseline.yaml")
+    cfg["model"]["strides"] = [2, 2, 2, 2]  # stride product = 16
+    cfg["training"]["sliding_window"]["roi_size"] = [95, 96, 96]
+    with pytest.raises(ConfigError, match="training.sliding_window.roi_size dimensions must be divisible"):
+        validate_config(cfg)
+
+    # 6. resume.path missing when enabled and not 'auto'
+    cfg = load_config("configs/baseline.yaml")
+    cfg["training"]["resume"]["enabled"] = True
+    cfg["training"]["resume"]["path"] = None
+    with pytest.raises(ConfigError, match="training.resume.path is required"):
+        validate_config(cfg)
+
+    cfg["training"]["resume"]["path"] = "auto"
+    validate_config(cfg)  # Should succeed with "auto"
+
