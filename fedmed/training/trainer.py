@@ -164,8 +164,14 @@ class Trainer:
             if max_steps is not None and batch_idx >= max_steps:
                 break
 
-            images = batch["image"].to(self.device, non_blocking=pin_memory)
-            labels = batch["label"].to(self.device, non_blocking=pin_memory)
+            if isinstance(batch, (list, tuple)):
+                images, labels = batch[0], batch[1]
+            else:
+                images = batch["image"]
+                labels = batch["label"]
+
+            images = images.to(self.device, non_blocking=pin_memory)
+            labels = labels.to(self.device, non_blocking=pin_memory)
             batch_size = images.shape[0]
             samples_seen += batch_size
 
@@ -302,8 +308,14 @@ class Trainer:
 
         with torch.no_grad():
             for batch in loader:
-                images = batch["image"].to(self.device, non_blocking=pin_memory)
-                labels = batch["label"].to(self.device, non_blocking=pin_memory)
+                if isinstance(batch, (list, tuple)):
+                    images, labels = batch[0], batch[1]
+                else:
+                    images = batch["image"]
+                    labels = batch["label"]
+
+                images = images.to(self.device, non_blocking=pin_memory)
+                labels = labels.to(self.device, non_blocking=pin_memory)
                 b_size = images.shape[0]
 
                 with self._autocast_context():
@@ -381,7 +393,8 @@ class Trainer:
 
         csv_path = results_dir / "metrics.csv"
         tb_dir = self.run_dir / "tensorboard" if train_cfg.get("logging", {}).get("tensorboard", True) else None
-        csv_logger = MetricsCSVLogger(csv_path=csv_path, start_epoch=start_epoch, tensorboard_dir=tb_dir)
+        first_new_epoch = (start_epoch + 1) if start_epoch > 0 else 0
+        csv_logger = MetricsCSVLogger(csv_path=csv_path, start_epoch=first_new_epoch, tensorboard_dir=tb_dir)
 
         cfg_h = config_hash(self.cfg)
         best_monitored_val = -float("inf") if es_mode == "max" else float("inf")
