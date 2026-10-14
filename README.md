@@ -151,3 +151,24 @@ Run the full CPU-only test suite:
 pytest tests/ -v
 ```
 All unit and integration tests run deterministically without internet access or GPU dependencies.
+
+---
+
+## Centralized Baseline Training & Evaluation (Week 1)
+
+FedMed includes a complete centralized training and evaluation pipeline producing benchmark segmentation performance on the BraTS multi-sequence dataset.
+
+- **Guide & Runbook**: See [docs/baseline.md](docs/baseline.md) for full configuration reference, directory layout, CSV/JSON schemas, determinism notes, and Google Colab / Kaggle runbooks.
+- **Fast Smoke Test**:
+  ```bash
+  python scripts/train_baseline.py --config configs/smoke_test.yaml --smoke
+  ```
+- **Full Centralized Training**:
+  ```bash
+  python scripts/train_baseline.py --config configs/base.yaml --device cuda
+  ```
+- **Evaluation**:
+  ```bash
+  python scripts/evaluate.py --config configs/base.yaml --checkpoint <checkpoint_path> --split test --hd95
+  ```
+
