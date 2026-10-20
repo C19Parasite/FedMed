@@ -88,7 +88,15 @@ class ConvertToBratsChannelsd(MapTransform):
             wt = self._mask(squeezed, mapping["wt"])
             et = self._mask(squeezed, mapping["et"])
             stacked = np.stack([tc, wt, et], axis=0).astype(np.float32)
-            d[key] = torch.from_numpy(stacked) if is_tensor else stacked
+            if is_tensor:
+                out_tensor = torch.from_numpy(stacked)
+                if hasattr(label, "meta") and getattr(label, "meta", None):
+                    from monai.data import MetaTensor
+
+                    out_tensor = MetaTensor(out_tensor, meta=label.meta)
+                d[key] = out_tensor
+            else:
+                d[key] = stacked
         return d
 
     @staticmethod
@@ -127,7 +135,7 @@ def get_train_transforms(cfg: Mapping[str, Any]) -> Compose:
         [
             LoadImaged(keys=keys),
             EnsureChannelFirstd(keys=keys),
-            Orientationd(keys=keys, axcodes=data["orientation"]),
+            Orientationd(keys=keys, axcodes=data["orientation"], labels=None),
             Spacingd(
                 keys=keys,
                 pixdim=tuple(data["spacing"]),
@@ -173,7 +181,7 @@ def get_eval_transforms(cfg: Mapping[str, Any]) -> Compose:
         [
             LoadImaged(keys=keys),
             EnsureChannelFirstd(keys=keys),
-            Orientationd(keys=keys, axcodes=data["orientation"]),
+            Orientationd(keys=keys, axcodes=data["orientation"], labels=None),
             Spacingd(
                 keys=keys,
                 pixdim=tuple(data["spacing"]),

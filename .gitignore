@@ -19,6 +19,7 @@
 # Tensorboard runs and training outputs
 /runs/
 /outputs/
+/results/
 
 # Python virtual environments
 .venv/

@@ -21,7 +21,7 @@ from fedmed.training.losses import build_loss
 from fedmed.training.metrics import SegmentationMetrics
 from fedmed.training.run import config_hash, environment_info
 from fedmed.training.trainer import Trainer
-from fedmed.utils.config import load_config
+from fedmed.utils.config import apply_override, load_config
 from fedmed.utils.logging import get_logger
 from fedmed.utils.seed import set_seed
 
@@ -71,34 +71,6 @@ def parse_args() -> argparse.Namespace:
         help="Key=value configuration overrides (e.g. data.batch_size=4).",
     )
     return parser.parse_args()
-
-
-def apply_override(cfg: dict[str, Any], key_path: str, val_str: str) -> None:
-    """Apply dotted key-value override into nested dictionary."""
-    parts = key_path.split(".")
-    curr: dict[str, Any] = cfg
-    for p in parts[:-1]:
-        if p not in curr or not isinstance(curr[p], dict):
-            curr[p] = {}
-        curr = curr[p]
-    last_key = parts[-1]
-
-    val_lower = val_str.lower()
-    if val_lower in ("true", "yes"):
-        val: Any = True
-    elif val_lower in ("false", "no"):
-        val = False
-    elif val_lower in ("null", "none"):
-        val = None
-    else:
-        try:
-            val = int(val_str)
-        except ValueError:
-            try:
-                val = float(val_str)
-            except ValueError:
-                val = val_str
-    curr[last_key] = val
 
 
 def main() -> None:

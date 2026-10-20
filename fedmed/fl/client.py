@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 from monai.data import DataLoader
 
+from fedmed.models.params import get_parameters as extract_model_parameters, set_parameters as apply_model_parameters
 from fedmed.training.losses import get_loss
 from fedmed.training.metrics import evaluate_brats_dice
 from fedmed.utils.logging import get_logger
@@ -76,7 +77,7 @@ class HospitalClient(fl.client.NumPyClient):
         Returns:
             List of model weights in NumPy format.
         """
-        return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
+        return extract_model_parameters(self.model)
 
     def set_parameters(self, parameters: List[np.ndarray]) -> None:
         """Update local model weights with received parameters.
@@ -84,19 +85,20 @@ class HospitalClient(fl.client.NumPyClient):
         Args:
             parameters: List of weight tensors in NumPy format.
         """
-        params_dict = zip(self.model.state_dict().keys(), parameters)
-        state_dict = {k: torch.tensor(v, device=self.device) for k, v in params_dict}
-        self.model.load_state_dict(state_dict, strict=True)
+        apply_model_parameters(self.model, parameters)
 
     def _extract_batch_tensors(self, batch: Any) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Extract image and label tensors robustly from collated batch or list."""
+        """Extract image and label tensors robustly from collated batch, list, or tuple."""
         if isinstance(batch, dict):
             return batch["image"].to(self.device), batch["label"].to(self.device)
-        if isinstance(batch, list):
+        if isinstance(batch, (tuple, list)):
+            if len(batch) == 2 and isinstance(batch[0], torch.Tensor) and isinstance(batch[1], torch.Tensor):
+                return batch[0].to(self.device), batch[1].to(self.device)
             # In case of uncollated list of dict samples
-            images = torch.stack([item["image"] for item in batch]).to(self.device)
-            labels = torch.stack([item["label"] for item in batch]).to(self.device)
-            return images, labels
+            if all(isinstance(item, dict) for item in batch):
+                images = torch.stack([item["image"] for item in batch]).to(self.device)
+                labels = torch.stack([item["label"] for item in batch]).to(self.device)
+                return images, labels
         raise TypeError(f"Unexpected batch type: {type(batch)}")
 
     def fit(
@@ -122,7 +124,7 @@ class HospitalClient(fl.client.NumPyClient):
             for batch in self.train_loader:
                 images, labels = self._extract_batch_tensors(batch)
 
-                self.optimizer.zero_grad()
+                self.optimizer.zero_grad(set_to_none=True)
                 logits = self.model(images)
                 loss = self.criterion(logits, labels)
                 loss.backward()

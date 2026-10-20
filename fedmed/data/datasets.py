@@ -200,7 +200,13 @@ def _pick(
             matches.append(path)
     if not matches:
         return None
-    return sorted(matches, key=lambda p: p.name)[0]
+    # Prefer exact token match on word boundaries if available
+    exact_matches = [
+        p for p in matches
+        if any(h in set(p.name.lower().replace(".", "_").replace("-", "_").split("_")) for h in hints)
+    ]
+    pool = exact_matches if exact_matches else matches
+    return sorted(pool, key=lambda p: p.name)[0]
 
 
 # Re-export get_loaders for convenient access from datasets module

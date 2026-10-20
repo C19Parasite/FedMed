@@ -156,7 +156,7 @@ class Trainer:
         samples_seen = 0
         accum_count = 0
 
-        self.optimizer.zero_grad()
+        self.optimizer.zero_grad(set_to_none=True)
 
         num_batches = len(loader) if hasattr(loader, "__len__") else None
 
@@ -190,7 +190,7 @@ class Trainer:
                     epoch,
                     batch_idx,
                 )
-                self.optimizer.zero_grad()
+                self.optimizer.zero_grad(set_to_none=True)
                 skipped_steps += 1
                 consecutive_skipped += 1
                 accum_count = 0
@@ -233,7 +233,7 @@ class Trainer:
                         epoch,
                         batch_idx,
                     )
-                    self.optimizer.zero_grad()
+                    self.optimizer.zero_grad(set_to_none=True)
                     skipped_steps += 1
                     consecutive_skipped += 1
                     accum_count = 0
@@ -251,7 +251,7 @@ class Trainer:
                 else:
                     self.optimizer.step()
 
-                self.optimizer.zero_grad()
+                self.optimizer.zero_grad(set_to_none=True)
                 total_loss += loss_val
                 total_grad_norm += grad_norm_val
                 steps += 1
@@ -402,6 +402,7 @@ class Trainer:
         best_metrics: dict[str, Any] = {}
         history: list[dict[str, Any]] = []
         validation_rounds_no_improve = 0
+        current_epoch = start_epoch
 
         self.logger.info(
             "Beginning fit schedule from epoch %d to %d (monitoring=%s, mode=%s)",
@@ -413,6 +414,7 @@ class Trainer:
 
         try:
             for epoch in range(start_epoch + 1, total_epochs + 1):
+                current_epoch = epoch
                 train_res = self.train_one_epoch(train_loader, epoch=epoch)
 
                 # Validation decision
@@ -541,7 +543,7 @@ class Trainer:
                 optimizer=self.optimizer,
                 scheduler=self.scheduler,
                 scaler=self.scaler,
-                epoch=epoch,
+                epoch=current_epoch,
                 best_metric=best_monitored_val,
                 history=history,
                 cfg_hash=cfg_h,
@@ -648,7 +650,7 @@ class CentralizedTrainer:
             images = batch["image"].to(self.device)
             labels = batch["label"].to(self.device)
 
-            self.optimizer.zero_grad()
+            self.optimizer.zero_grad(set_to_none=True)
             logits = self.model(images)
             loss = self.criterion(logits, labels)
             loss.backward()

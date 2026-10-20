@@ -60,6 +60,8 @@ def partition_cases_for_hospitals(
     Returns:
         List of partitioned case sub-lists.
     """
+    if num_hospitals <= 0:
+        raise ValueError(f"num_hospitals must be positive, got {num_hospitals}")
     partitions: List[List[Dict[str, Any]]] = [[] for _ in range(num_hospitals)]
     for idx, case in enumerate(cases):
         partitions[idx % num_hospitals].append(case)
