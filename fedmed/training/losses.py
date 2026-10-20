@@ -47,13 +47,19 @@ class DeepSupervisionLoss(nn.Module):
         super().__init__()
         self.base_loss = base_loss
         self._custom_weights = list(weights) if weights is not None else None
+        self._weights_cache: dict[tuple[int, torch.device], torch.Tensor] = {}
 
     def _compute_weights(self, n_stages: int, device: torch.device) -> torch.Tensor:
+        cache_key = (n_stages, device)
+        if cache_key in self._weights_cache:
+            return self._weights_cache[cache_key]
         if self._custom_weights is not None:
             raw = torch.tensor(self._custom_weights[:n_stages], dtype=torch.float32, device=device)
         else:
             raw = torch.tensor([0.5**i for i in range(n_stages)], dtype=torch.float32, device=device)
-        return raw / raw.sum()
+        w = raw / raw.sum()
+        self._weights_cache[cache_key] = w
+        return w
 
     def forward(
         self,

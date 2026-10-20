@@ -44,7 +44,7 @@ def get_loaders(cfg: Mapping[str, Any]) -> dict[str, DataLoader]:
         label_scheme=str(data_cfg["label_scheme"]),
     )
     loaders = {
-        mode: build_loader(cfg, splits[mode], mode)
+        mode: build_loader(cfg, splits[mode], mode, cases=cases)
         for mode in ("train", "val", "test")
     }
     logger.info(
@@ -60,6 +60,7 @@ def build_loader(
     cfg: Mapping[str, Any],
     patient_ids: Sequence[str],
     mode: str,
+    cases: Sequence[dict[str, Any]] | None = None,
 ) -> DataLoader:
     """Build a DataLoader for an explicit patient-ID partition.
 
@@ -69,6 +70,7 @@ def build_loader(
         cfg: Validated config mapping.
         patient_ids: IDs to include.
         mode: ``train``, ``val``, or ``test``.
+        cases: Optional pre-discovered case records to avoid redundant directory scanning.
 
     Returns:
         MONAI / PyTorch DataLoader.
@@ -76,8 +78,9 @@ def build_loader(
     if mode not in _MODES:
         raise ValueError(f"mode must be one of {sorted(_MODES)}, got '{mode}'")
     id_set = set(patient_ids)
-    cases = [case for case in discover_cases(cfg) if case["patient_id"] in id_set]
-    cases = sorted(cases, key=lambda c: c["patient_id"])
+    all_cases = cases if cases is not None else discover_cases(cfg)
+    matched_cases = [case for case in all_cases if case["patient_id"] in id_set]
+    cases = sorted(matched_cases, key=lambda c: c["patient_id"])
     transform = get_train_transforms(cfg) if mode == "train" else get_eval_transforms(cfg)
     dataset = _make_dataset(cfg, cases, transform)
     data_cfg = cfg["data"]

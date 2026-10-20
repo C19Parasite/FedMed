@@ -113,39 +113,33 @@ def dice_per_channel(
     if pred.shape != target.shape:
         raise ValueError(f"Shape mismatch: pred {pred.shape} vs target {target.shape}")
 
-    b_size, n_channels = pred.shape[0], pred.shape[1]
-    scores = torch.zeros((b_size, n_channels), dtype=torch.float32, device="cpu")
+    policy = str(empty_policy).lower()
+    if policy not in ("brats", "skip"):
+        raise ValueError(f"Unknown empty_policy '{empty_policy}'")
 
-    pred_cpu = pred.detach().cpu()
-    target_cpu = target.detach().cpu()
+    p = pred.detach().float()
+    t = target.detach().float()
 
-    for b in range(b_size):
-        for c in range(n_channels):
-            p = pred_cpu[b, c]
-            t = target_cpu[b, c]
+    intersection = (p * t).sum(dim=(-3, -2, -1))
+    p_sum = p.sum(dim=(-3, -2, -1))
+    t_sum = t.sum(dim=(-3, -2, -1))
 
-            p_sum = p.sum().item()
-            t_sum = t.sum().item()
+    gt_empty = (t_sum == 0)
+    pred_empty = (p_sum == 0)
+    both_empty = gt_empty & pred_empty
 
-            gt_empty = (t_sum == 0)
-            pred_empty = (p_sum == 0)
+    denom = p_sum + t_sum
+    dice = (2.0 * intersection) / torch.clamp(denom, min=1e-8)
 
-            if gt_empty:
-                if empty_policy == "skip":
-                    scores[b, c] = float("nan")
-                elif empty_policy == "brats":
-                    scores[b, c] = 1.0 if pred_empty else 0.0
-                else:
-                    raise ValueError(f"Unknown empty_policy '{empty_policy}'")
-            else:
-                if pred_empty:
-                    scores[b, c] = 0.0
-                else:
-                    intersection = (p * t).sum().item()
-                    dice_val = (2.0 * intersection) / (p_sum + t_sum)
-                    scores[b, c] = float(dice_val)
+    if policy == "brats":
+        dice = torch.where(both_empty, torch.ones_like(dice), dice)
+        dice = torch.where(gt_empty & (~pred_empty), torch.zeros_like(dice), dice)
+        dice = torch.where(pred_empty & (~gt_empty), torch.zeros_like(dice), dice)
+    else:
+        dice = torch.where(gt_empty, torch.full_like(dice, float("nan")), dice)
+        dice = torch.where(pred_empty & (~gt_empty), torch.zeros_like(dice), dice)
 
-    return scores
+    return dice.cpu()
 
 
 def hd95_per_channel(
@@ -154,6 +148,7 @@ def hd95_per_channel(
     spacing: Sequence[float] | None = None,
     max_hd95: float = DEFAULT_MAX_HD95,
     empty_policy: str = "brats",
+    metric: Any | None = None,
 ) -> torch.Tensor:
     """Compute channel-wise 95th-percentile Hausdorff Distance (HD95) for a batch of volumes.
 
@@ -182,10 +177,14 @@ def hd95_per_channel(
     b_size, n_channels = pred.shape[0], pred.shape[1]
     scores = torch.zeros((b_size, n_channels), dtype=torch.float32, device="cpu")
 
-    hd95_metric = HausdorffDistanceMetric(
-        include_background=True,
-        percentile=95,
-        reduction="none",
+    hd95_metric = (
+        metric
+        if metric is not None
+        else HausdorffDistanceMetric(
+            include_background=True,
+            percentile=95,
+            reduction="none",
+        )
     )
 
     for b in range(b_size):
@@ -351,6 +350,11 @@ class SegmentationMetrics:
         # Optional expensive HD95 computation
         if include_hd95 and self.raw_preds_labels:
             hd95_batches = []
+            metric_inst = HausdorffDistanceMetric(
+                include_background=True,
+                percentile=95,
+                reduction="none",
+            )
             for p, l in self.raw_preds_labels:
                 hd95_batch = hd95_per_channel(
                     p,
@@ -358,6 +362,7 @@ class SegmentationMetrics:
                     spacing=self.spacing,
                     max_hd95=self.max_hd95,
                     empty_policy=self.empty_policy,
+                    metric=metric_inst,
                 )
                 hd95_batches.append(hd95_batch)
 

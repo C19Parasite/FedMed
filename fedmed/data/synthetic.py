@@ -82,8 +82,6 @@ def _random_volume(
     d1, h1, w1 = max(d0 + 2, depth // 2), max(h0 + 2, height // 2), max(w0 + 2, width // 2)
     label[d0:d1, h0:h1, w0:w1] = 1
     label[d0 + 1 : d1, h0 + 1 : h1, w0 + 1 : w1] = 2
-    inner = label.copy()
-    inner[:] = 0
     label[d0 + 2 : max(d0 + 3, d1 - 1), h0 + 2 : max(h0 + 3, h1 - 1), w0 + 2 : max(w0 + 3, w1 - 1)] = (
         3 if label_scheme == "msd" else 4
     )

@@ -54,7 +54,8 @@ def set_parameters(model: nn.Module, params: list[np.ndarray]) -> None:
     Raises:
         ValueError: If parameter list length or individual tensor shapes do not match.
     """
-    state_keys = list(model.state_dict().keys())
+    curr_state = model.state_dict()
+    state_keys = list(curr_state.keys())
     if len(params) != len(state_keys):
         raise ValueError(
             f"Parameter count mismatch: provided {len(params)} parameter arrays, "
@@ -63,7 +64,7 @@ def set_parameters(model: nn.Module, params: list[np.ndarray]) -> None:
 
     new_state: dict[str, torch.Tensor] = {}
     for key, arr in zip(state_keys, params):
-        expected_tensor = model.state_dict()[key]
+        expected_tensor = curr_state[key]
         expected_shape = tuple(expected_tensor.shape)
         actual_shape = tuple(arr.shape)
 
@@ -73,7 +74,8 @@ def set_parameters(model: nn.Module, params: list[np.ndarray]) -> None:
                 f"got array shape {actual_shape}."
             )
 
-        new_state[key] = torch.from_numpy(arr).to(
+        new_state[key] = torch.as_tensor(
+            arr,
             device=expected_tensor.device,
             dtype=expected_tensor.dtype,
         )
