@@ -96,3 +96,65 @@ def test_hospital_client_fit_and_evaluate(tmp_path: Path) -> None:
     loss, eval_samples, eval_metrics = client.evaluate(new_params, config={})
     assert eval_samples > 0
     assert "dice_mean" in eval_metrics
+
+
+def test_hospital_client_privacy_transformation_hooks(tmp_path: Path) -> None:
+    """Verify weight transformation hooks for Homomorphic Encryption and DP."""
+    p_ids = generate_synthetic_dataset(tmp_path, 2, (16, 16, 16), seed=99, layout="msd")
+    cases = [
+        {
+            "patient_id": pid,
+            "image": str(tmp_path / pid / "image.nii.gz"),
+            "label": str(tmp_path / pid / "label.nii.gz"),
+        }
+        for pid in p_ids
+    ]
+    cfg = load_config("configs/baseline.yaml")
+    cfg["data"]["roi_size"] = [16, 16, 16]
+
+    train_ds = _make_dataset(cfg, cases, get_train_transforms(cfg))
+    train_loader = DataLoader(train_ds, batch_size=2)
+    val_loader = DataLoader(train_ds, batch_size=1)
+
+    model = UNet3D(
+        in_channels=4,
+        out_channels=3,
+        channels=(4, 8),
+        strides=(2,),
+        norm="INSTANCE",
+    )
+
+    pre_send_called = []
+    post_receive_called = []
+
+    def mock_pre_send(weights, ctx):
+        pre_send_called.append(ctx.get("phase"))
+        # Add tiny synthetic transformation
+        return [w + 0.01 for w in weights]
+
+    def mock_post_receive(weights, ctx):
+        post_receive_called.append(ctx.get("phase"))
+        # Undo synthetic transformation
+        return [w - 0.01 for w in weights]
+
+    client = HospitalClient(
+        hospital_id="privacy_hospital",
+        model=model,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        cfg=cfg,
+        device="cpu",
+        pre_send_transform=mock_pre_send,
+        post_receive_transform=mock_post_receive,
+    )
+
+    initial_params = client.get_parameters(config={})
+    # Run fit: should trigger post_receive for incoming params, and pre_send for outgoing params
+    outbound_params, n_samples, _ = client.fit(initial_params, config={"local_epochs": 1})
+    assert "fit" in post_receive_called
+    assert "fit" in pre_send_called
+    assert len(outbound_params) == len(initial_params)
+
+    # Run evaluate: should trigger post_receive
+    client.evaluate(initial_params, config={})
+    assert "evaluate" in post_receive_called

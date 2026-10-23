@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
 import flwr as fl
 import numpy as np
 import torch
@@ -40,12 +40,16 @@ class HospitalClient(fl.client.NumPyClient):
         val_loader: DataLoader,
         cfg: Mapping[str, Any],
         device: Optional[torch.device | str] = None,
+        pre_send_transform: Optional[Callable[[List[np.ndarray], Dict[str, Any]], List[np.ndarray]]] = None,
+        post_receive_transform: Optional[Callable[[List[np.ndarray], Dict[str, Any]], List[np.ndarray]]] = None,
     ) -> None:
         self.hospital_id = hospital_id
         self.model = model
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.cfg = cfg
+        self.pre_send_transform = pre_send_transform
+        self.post_receive_transform = post_receive_transform
 
         if device is None:
             configured_dev = cfg.get("training", {}).get("device", "cpu")
@@ -87,6 +91,44 @@ class HospitalClient(fl.client.NumPyClient):
         """
         apply_model_parameters(self.model, parameters)
 
+    def transform_weights_before_sending(
+        self, weights: List[np.ndarray], context: Optional[Dict[str, Any]] = None
+    ) -> List[np.ndarray]:
+        """Hook for Week 3-4 privacy transforms: Homomorphic Encryption (TenSEAL) or Differential Privacy noise.
+
+        Called immediately before model weights leave this hospital node over gRPC.
+
+        Args:
+            weights: Local model weights as NumPy ndarrays.
+            context: Contextual metadata (e.g. {'phase': 'fit', 'num_examples': N}).
+
+        Returns:
+            Transformed/encrypted weights to send to server.
+        """
+        ctx = context or {}
+        if self.pre_send_transform is not None:
+            return self.pre_send_transform(weights, ctx)
+        return weights
+
+    def transform_weights_after_receiving(
+        self, weights: List[np.ndarray], context: Optional[Dict[str, Any]] = None
+    ) -> List[np.ndarray]:
+        """Hook for Week 3-4 privacy transforms: Decryption or post-reception weight processing.
+
+        Called immediately after global weights are received from central server before applying.
+
+        Args:
+            weights: Inbound global weights from server.
+            context: Contextual metadata (e.g. {'phase': 'fit'|'evaluate'}).
+
+        Returns:
+            Decrypted/reconstructed weights ready to load into local model.
+        """
+        ctx = context or {}
+        if self.post_receive_transform is not None:
+            return self.post_receive_transform(weights, ctx)
+        return weights
+
     def _extract_batch_tensors(self, batch: Any) -> Tuple[torch.Tensor, torch.Tensor]:
         """Extract image and label tensors robustly from collated batch, list, or tuple."""
         if isinstance(batch, dict):
@@ -113,7 +155,11 @@ class HospitalClient(fl.client.NumPyClient):
         Returns:
             Tuple of (updated weights, num_samples, training metrics).
         """
-        self.set_parameters(parameters)
+        # Apply pre-training inbound weight transformation hook (e.g. Decryption)
+        weights = self.transform_weights_after_receiving(
+            parameters, context={"phase": "fit", "config": config}
+        )
+        self.set_parameters(weights)
         self.model.train()
 
         local_epochs = int(config.get("local_epochs", 1))
@@ -141,7 +187,12 @@ class HospitalClient(fl.client.NumPyClient):
             num_examples,
             avg_loss,
         )
-        return self.get_parameters(config={}), num_examples, {"train_loss": avg_loss}
+        local_weights = self.get_parameters(config={})
+        # Apply post-training outbound weight transformation hook (e.g. TenSEAL encryption or DP noise)
+        outbound_weights = self.transform_weights_before_sending(
+            local_weights, context={"phase": "fit", "num_examples": num_examples}
+        )
+        return outbound_weights, num_examples, {"train_loss": avg_loss}
 
     def evaluate(
         self, parameters: List[np.ndarray], config: Dict[str, Any]
@@ -155,7 +206,11 @@ class HospitalClient(fl.client.NumPyClient):
         Returns:
             Tuple of (val_loss, num_samples, evaluation metrics dict).
         """
-        self.set_parameters(parameters)
+        # Apply pre-evaluation inbound weight transformation hook
+        weights = self.transform_weights_after_receiving(
+            parameters, context={"phase": "evaluate", "config": config}
+        )
+        self.set_parameters(weights)
         self.model.eval()
 
         total_loss = 0.0
