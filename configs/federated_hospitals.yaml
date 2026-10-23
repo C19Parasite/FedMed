@@ -12,6 +12,13 @@ server:
   fraction_fit: 1.0
   fraction_eval: 1.0
 
+federated:
+  mode: "iid"                    # "iid" (equal balanced split) or "non_iid" (proportional split)
+  proportions: [0.50, 0.30, 0.20] # used when mode is "non_iid"
+  local_val_ratio: 0.20          # 20% of each hospital's data reserved for local validation
+  global_val_ratio: 0.15         # 15% held out for server-side global evaluation
+  manifest_path: "partitions/partition_manifest.json"
+
 hospitals:
   - id: "hospital_1"
     name: "General Hospital Scribe"
@@ -71,7 +78,7 @@ data:
     spatial_size: [32, 32, 32]
 
 model:
-  name: "UNet3D"
+  name: "monai_unet"
   in_channels: 4
   out_channels: 3
   channels: [16, 32, 64]

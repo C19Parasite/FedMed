@@ -11,6 +11,7 @@ from monai.data import DataLoader
 
 from fedmed.data.datasets import discover_cases
 from fedmed.data.loaders import _make_dataset
+from fedmed.data.partition import create_or_load_partitions, get_hospital_loaders
 from fedmed.data.transforms import get_eval_transforms, get_train_transforms
 from fedmed.fl.client import HospitalClient
 from fedmed.fl.server import partition_cases_for_hospitals, start_fedmed_server
@@ -57,20 +58,28 @@ def parse_args() -> argparse.Namespace:
 
 
 def build_hospital_client(
-    cfg: dict, hospital_id: str, hospital_cases: list[dict]
+    cfg: dict,
+    hospital_id: str,
+    hospital_cases: list[dict] | None = None,
+    manifest: dict | None = None,
 ) -> HospitalClient:
     """Construct a HospitalClient instance with its private data partition."""
-    # Split cases 75% train, 25% val for this silo
-    n_train = max(1, int(len(hospital_cases) * 0.75))
-    train_cases = hospital_cases[:n_train]
-    val_cases = hospital_cases[n_train:] or hospital_cases[:1]
+    if manifest is not None or hospital_cases is None:
+        loaders = get_hospital_loaders(hospital_id, cfg, manifest=manifest)
+        train_loader = loaders.train
+        val_loader = loaders.val
+    else:
+        # Fallback when explicit cases list is passed
+        n_train = max(1, int(len(hospital_cases) * 0.75))
+        train_cases = hospital_cases[:n_train]
+        val_cases = hospital_cases[n_train:] or hospital_cases[:1]
 
-    train_ds = _make_dataset(cfg, train_cases, get_train_transforms(cfg))
-    val_ds = _make_dataset(cfg, val_cases, get_eval_transforms(cfg))
+        train_ds = _make_dataset(cfg, train_cases, get_train_transforms(cfg))
+        val_ds = _make_dataset(cfg, val_cases, get_eval_transforms(cfg))
 
-    batch_size = int(cfg["data"]["batch_size"])
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_ds, batch_size=1, shuffle=False)
+        batch_size = int(cfg["data"]["batch_size"])
+        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
+        val_loader = DataLoader(val_ds, batch_size=1, shuffle=False)
 
     model = get_model(cfg)
     return HospitalClient(
@@ -89,22 +98,21 @@ def run_orchestration(cfg: dict, server_address: str) -> None:
     hospitals = cfg.get("hospitals", [])
     num_hospitals = len(hospitals)
 
-    all_cases = discover_cases(cfg)
-    logger.info("Total cohort discovered: %s cases for %s hospitals", len(all_cases), num_hospitals)
-    partitions = partition_cases_for_hospitals(all_cases, num_hospitals)
+    # Patient-level partitioning across hospitals with global validation hold-out
+    manifest = create_or_load_partitions(cfg, print_table=True)
 
     clients = []
     for idx, hosp in enumerate(hospitals):
         hosp_id = hosp["id"]
-        hosp_cases = partitions[idx]
+        hosp_patients = manifest.get("hospitals", {}).get(hosp_id, {}).get("patient_ids", [])
         logger.info(
-            "Configured hospital node [%s] (%s) on mock port %s with %s private cases",
+            "Configured hospital node [%s] (%s) on mock port %s with %s private patient cases",
             hosp_id,
             hosp["name"],
             hosp["port"],
-            len(hosp_cases),
+            len(hosp_patients),
         )
-        client = build_hospital_client(cfg, hosp_id, hosp_cases)
+        client = build_hospital_client(cfg, hosp_id, manifest=manifest)
         clients.append((hosp, client))
 
     # Run in thread pool: start server then start the 3 hospital clients

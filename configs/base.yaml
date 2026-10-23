@@ -44,6 +44,13 @@ data:
     num_patients: 10
     spatial_size: [64, 64, 64]
 
+federated:
+  mode: "iid"                      # "iid" (equal split) or "non_iid" (proportions)
+  proportions: [0.50, 0.30, 0.20]   # for non_iid mode
+  local_val_ratio: 0.20            # 20% of each hospital's cases for local validation
+  global_val_ratio: 0.15           # 15% held out for server-side evaluation
+  manifest_path: "partitions/partition_manifest.json"
+
 model:
   name: "monai_unet"            # "monai_unet", "segresnet", "dynunet", "unet3d_custom"
   in_channels: 4

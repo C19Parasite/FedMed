@@ -172,3 +172,28 @@ FedMed includes a complete centralized training and evaluation pipeline producin
   python scripts/evaluate.py --config configs/base.yaml --checkpoint <checkpoint_path> --split test --hd95
   ```
 
+
+
+---
+
+## Cross-Silo Data Partitioning (`fedmed.data.partition`)
+
+FedMed features a patient-level data partitioning module for multi-hospital federated simulations:
+
+- **Patient-Level Isolation**: A patient's MRI scans exist strictly in one hospital silo or the global validation holdout. No patient is ever split across hospitals.
+- **Server Global Validation Set**: 15% (configurable) of patients are held out completely from all hospitals. The aggregation server uses this set exclusively to evaluate the global federated model.
+- **Baseline Test Split Preservation**: If a baseline `data/splits.json` exists, the global test set is preserved identically so federated results are directly comparable to centralized benchmarks.
+- **IID and Non-IID Partitioning**:
+  - `iid`: Shuffled patient cohort divided equally across the 3 hospitals.
+  - `non_iid`: Proportional cohort partitioning (e.g. 50% / 30% / 20%) simulating heterogeneous clinic capacities.
+- **Privacy-Preserving Manifest**: `partitions/partition_manifest.json` persists only string patient identifiers—never raw scans, labels, or filesystem paths.
+- **API**:
+  ```python
+  from fedmed.data.partition import create_or_load_partitions, get_hospital_loaders
+
+  # Generate or load partition manifest and display summary table:
+  manifest = create_or_load_partitions(cfg)
+
+  # Retrieve MONAI train and local-val DataLoaders for a specific silo:
+  train_loader, val_loader = get_hospital_loaders("hospital_1", cfg)
+  ```
