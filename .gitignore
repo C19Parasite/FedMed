@@ -46,5 +46,15 @@ build/
 .cache/
 .monai/
 
+# TLS / SSL Certificates, Private Keys, and Credentials (Rule 5)
+/certificates/
+/certs/
+*.pem
+*.key
+*.crt
+*.csr
+*.pfx
+*.p12
+
 # Visualization outputs
 *.png
