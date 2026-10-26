@@ -162,7 +162,7 @@ FedMed/
 ## Quick Start & Verification
 
 ### 1. One-Command Live Demonstration
-Launch the complete stack (FastAPI backend on `:8000`, Flower FL server on `:8080`, 3 Hospital nodes, and React UI on `:5173`):
+Launch the complete stack (FastAPI backend on `:8000`, Flower FL server on `:8080`, 3 Hospital nodes, and React UI on `:3000`):
 
 ```bash
 # On Windows:
@@ -201,7 +201,7 @@ Execute the 117 test suite (CPU-friendly, completes in ~19s):
 cd dashboard
 npm install
 npm run dev
-# Open http://localhost:5173 in browser
+# Open http://localhost:3000 in browser
 ```
 
 ---

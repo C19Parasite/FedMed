@@ -36,9 +36,16 @@ echo "[5/5] Starting Hospital Silo 3..."
 $PYTHON scripts/run_hospital.py --id hospital_3 --config config.yaml > outputs/hospital_3.log 2>&1 &
 H3_PID=$!
 
-echo "Launching React Dashboard on http://localhost:5173..."
+echo "Launching React Dashboard on http://localhost:3000..."
 (cd dashboard && npm run dev) &
 DASH_PID=$!
+
+sleep 3
+if which xdg-open > /dev/null; then
+    xdg-open http://localhost:3000 &
+elif which open > /dev/null; then
+    open http://localhost:3000 &
+fi
 
 cleanup() {
     echo "Stopping all FedMed processes..."
