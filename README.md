@@ -196,12 +196,27 @@ Execute the 117 test suite (CPU-friendly, completes in ~19s):
 ```
 *Output: Proves adversarial gradient alignment drops from 1.0000 (plaintext) to -0.0097 (with DP).*
 
-### 6. React Monitoring Dashboard
+### 6. FedMed Modern Training Dashboard (React 18 + Vite + TypeScript)
+
+A modern, minimal, light-themed monitoring UI matching the "Dashboard V18" aesthetic:
+- **Design Tokens**: Soft lavender palette (`#F3F2F8` shell, `#7C5CFA` / `#B9A7F5` accents, mint green deltas, near-black `#111` pill sidebar and buttons).
+- **Component Tree**:
+  - `Sidebar.tsx`: Slim dark pill navigation (~64px) with circular lavender highlights.
+  - `HeroBanner.tsx`: Lavender gradient card with floating 3D flower and "+ Start New Round" button.
+  - `HospitalNodesRow.tsx`: 3 on-premise compute nodes with live quorum and dynamic "Dropped, round continues" resilience badge.
+  - `MetricTiles.tsx`: Global Dice Score (with progress bar), Loss (with SVG sparkline), and Node Impact Weight (lavender vertical bars).
+  - `TrainingStatistics.tsx`: Round 12 \| 30 progress, Per Round / Per Epoch toggles, Recharts area curves with gradient fills and dashed baseline.
+  - `PrivacyBudgetCard.tsx`: Differential privacy $\epsilon / \delta$ radial gauge and TenSEAL CKKS ciphertext status badge.
+  - `RoundSelector.tsx`: Calendar-style round selector strip (`OCTOBER 2026`).
+  - `SegmentationCarousel.tsx` & `SegmentationModal.tsx`: Horizontal MRI slice thumbnails and full multi-planar (Axial, Sagittal, Coronal) viewer with opacity slider and subregion overlays (WT, TC, ET).
+  - `NotificationFeed.tsx`: Live event feed with animated entrances.
+- **WebSocket & Mock Engine**: Includes an automatic 1.5s simulated event generator (`VITE_USE_MOCK=true`) and seamless reconnect to `ws://localhost:8000/ws/metrics`.
+
 ```bash
 cd dashboard
 npm install
 npm run dev
-# Open http://localhost:3000 in browser
+# Dashboard opens automatically at http://localhost:3000
 ```
 
 ---
