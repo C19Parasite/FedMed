@@ -3,23 +3,204 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --app-bg: #F3F2F8;
-    --card-bg: #FFFFFF;
+  :root,
+  [data-theme='clinical-violet'] {
+    --theme-primary: #7857FF;
+    --theme-primary-rgb: 120, 87, 255;
+    --theme-secondary: #A78BFA;
+    --theme-bg: #F4F2FA;
+    --theme-shell: #E9E7F2;
+    --theme-card: #FFFFFF;
+    --theme-surface-soft: #F8F7FC;
+    --theme-card-border: #EBE7F5;
+    --theme-text: #191827;
+    --theme-text-muted: #71717A;
+    --theme-accent: #22C55E;
+    --theme-sidebar-bg: #111116;
+    --theme-sidebar-darker: #0B0B0E;
+    --theme-p50: #F8F6FE;
+    --theme-p100: #F1EDFF;
+    --theme-p200: #E4DCFE;
+    --theme-p300: #D9CFFB;
+    --theme-p500: #9475F7;
+    --theme-p700: #6441E6;
+    --theme-p800: #4D2DC0;
+    --theme-p900: #341A8E;
+    --theme-p950: #1F0D59;
+    --theme-primary-glow: rgba(120, 87, 255, 0.35);
+    --theme-shadow-soft: 0 8px 30px rgba(120, 100, 180, 0.08);
+    --theme-shadow-card: 0 12px 35px rgba(120, 100, 180, 0.09);
+    --theme-shadow-lift: 0 16px 40px rgba(120, 100, 180, 0.14);
+    --theme-hero-gradient: linear-gradient(135deg, #DDD2FD 0%, #EFEAFF 50%, #F6F3FF 100%);
     --card-shadow: 0 8px 30px rgba(120, 100, 180, 0.08);
   }
 
+  [data-theme='medical-teal'] {
+    --theme-primary: #0D9488;
+    --theme-primary-rgb: 13, 148, 136;
+    --theme-secondary: #5EEAD4;
+    --theme-bg: #F0FDFA;
+    --theme-shell: #E0F7F4;
+    --theme-card: #FFFFFF;
+    --theme-surface-soft: #F4FBF9;
+    --theme-card-border: #CCFBF1;
+    --theme-text: #134E4A;
+    --theme-text-muted: #4F7571;
+    --theme-accent: #22C55E;
+    --theme-sidebar-bg: #0F1F1D;
+    --theme-sidebar-darker: #091413;
+    --theme-p50: #F0FDFA;
+    --theme-p100: #CCFBF1;
+    --theme-p200: #99F6E4;
+    --theme-p300: #5EEAD4;
+    --theme-p500: #14B8A6;
+    --theme-p700: #0F766E;
+    --theme-p800: #115E59;
+    --theme-p900: #134E4A;
+    --theme-p950: #042F2E;
+    --theme-primary-glow: rgba(13, 148, 136, 0.35);
+    --theme-shadow-soft: 0 8px 30px rgba(13, 148, 136, 0.08);
+    --theme-shadow-card: 0 12px 35px rgba(13, 148, 136, 0.09);
+    --theme-shadow-lift: 0 16px 40px rgba(13, 148, 136, 0.14);
+    --theme-hero-gradient: linear-gradient(135deg, #CCFBF1 0%, #E6FAF6 50%, #F0FDFA 100%);
+    --card-shadow: 0 8px 30px rgba(13, 148, 136, 0.08);
+  }
+
+  [data-theme='midnight-sapphire'] {
+    --theme-primary: #3B82F6;
+    --theme-primary-rgb: 59, 130, 246;
+    --theme-secondary: #60A5FA;
+    --theme-bg: #0B1220;
+    --theme-shell: #060A12;
+    --theme-card: #111C30;
+    --theme-surface-soft: #16233B;
+    --theme-card-border: #1E2E4A;
+    --theme-text: #E5EEFF;
+    --theme-text-muted: #94A3B8;
+    --theme-accent: #34D399;
+    --theme-sidebar-bg: #080D18;
+    --theme-sidebar-darker: #04070D;
+    --theme-p50: #16233B;
+    --theme-p100: #1D3256;
+    --theme-p200: rgba(59, 130, 246, 0.2);
+    --theme-p300: rgba(59, 130, 246, 0.35);
+    --theme-p500: #60A5FA;
+    --theme-p700: #2563EB;
+    --theme-p800: #1D4ED8;
+    --theme-p900: #1E3A8A;
+    --theme-p950: #172554;
+    --theme-primary-glow: rgba(59, 130, 246, 0.45);
+    --theme-shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.45);
+    --theme-shadow-card: 0 12px 35px rgba(0, 0, 0, 0.55);
+    --theme-shadow-lift: 0 16px 40px rgba(0, 0, 0, 0.65);
+    --theme-hero-gradient: linear-gradient(135deg, #162B4D 0%, #111C30 50%, #0B1220 100%);
+    --card-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  }
+
+  [data-theme='graphite-cyan'] {
+    --theme-primary: #06B6D4;
+    --theme-primary-rgb: 6, 182, 212;
+    --theme-secondary: #67E8F9;
+    --theme-bg: #111418;
+    --theme-shell: #0A0C0E;
+    --theme-card: #1B222A;
+    --theme-surface-soft: #222B35;
+    --theme-card-border: #283542;
+    --theme-text: #F1F5F9;
+    --theme-text-muted: #94A3B8;
+    --theme-accent: #4ADE80;
+    --theme-sidebar-bg: #0C0E11;
+    --theme-sidebar-darker: #060709;
+    --theme-p50: #16252C;
+    --theme-p100: #1B333E;
+    --theme-p200: rgba(6, 182, 212, 0.2);
+    --theme-p300: rgba(6, 182, 212, 0.35);
+    --theme-p500: #22D3EE;
+    --theme-p700: #0891B2;
+    --theme-p800: #0E7490;
+    --theme-p900: #155E75;
+    --theme-p950: #083344;
+    --theme-primary-glow: rgba(6, 182, 212, 0.45);
+    --theme-shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.45);
+    --theme-shadow-card: 0 12px 35px rgba(0, 0, 0, 0.55);
+    --theme-shadow-lift: 0 16px 40px rgba(0, 0, 0, 0.65);
+    --theme-hero-gradient: linear-gradient(135deg, #1E313D 0%, #1B222A 50%, #111418 100%);
+    --card-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  }
+
+  [data-theme='emerald-healthcare'] {
+    --theme-primary: #059669;
+    --theme-primary-rgb: 5, 150, 105;
+    --theme-secondary: #6EE7B7;
+    --theme-bg: #F0FDF4;
+    --theme-shell: #DCF5E5;
+    --theme-card: #FFFFFF;
+    --theme-surface-soft: #F4FBF6;
+    --theme-card-border: #D1FAE5;
+    --theme-text: #16352B;
+    --theme-text-muted: #4D6D62;
+    --theme-accent: #6366F1;
+    --theme-sidebar-bg: #0F221B;
+    --theme-sidebar-darker: #081611;
+    --theme-p50: #F0FDF4;
+    --theme-p100: #D1FAE5;
+    --theme-p200: #A7F3D0;
+    --theme-p300: #6EE7B7;
+    --theme-p500: #10B981;
+    --theme-p700: #047857;
+    --theme-p800: #065F46;
+    --theme-p900: #064E3B;
+    --theme-p950: #022C22;
+    --theme-primary-glow: rgba(5, 150, 105, 0.35);
+    --theme-shadow-soft: 0 8px 30px rgba(5, 150, 105, 0.08);
+    --theme-shadow-card: 0 12px 35px rgba(5, 150, 105, 0.09);
+    --theme-shadow-lift: 0 16px 40px rgba(5, 150, 105, 0.14);
+    --theme-hero-gradient: linear-gradient(135deg, #D1FAE5 0%, #E8FAF0 50%, #F0FDF4 100%);
+    --card-shadow: 0 8px 30px rgba(5, 150, 105, 0.08);
+  }
+
+  [data-theme='arctic-blue'] {
+    --theme-primary: #2563EB;
+    --theme-primary-rgb: 37, 99, 235;
+    --theme-secondary: #93C5FD;
+    --theme-bg: #F1F7FE;
+    --theme-shell: #E0EDFC;
+    --theme-card: #FFFFFF;
+    --theme-surface-soft: #F6F9FE;
+    --theme-card-border: #DBEAFE;
+    --theme-text: #172B4D;
+    --theme-text-muted: #5C6F8E;
+    --theme-accent: #F59E0B;
+    --theme-sidebar-bg: #0E1B2E;
+    --theme-sidebar-darker: #070E18;
+    --theme-p50: #EFF6FF;
+    --theme-p100: #DBEAFE;
+    --theme-p200: #BFDBFE;
+    --theme-p300: #93C5FD;
+    --theme-p500: #3B82F6;
+    --theme-p700: #1D4ED8;
+    --theme-p800: #1E40AF;
+    --theme-p900: #1E3A8A;
+    --theme-p950: #172554;
+    --theme-primary-glow: rgba(37, 99, 235, 0.35);
+    --theme-shadow-soft: 0 8px 30px rgba(37, 99, 235, 0.08);
+    --theme-shadow-card: 0 12px 35px rgba(37, 99, 235, 0.09);
+    --theme-shadow-lift: 0 16px 40px rgba(37, 99, 235, 0.14);
+    --theme-hero-gradient: linear-gradient(135deg, #DBEAFE 0%, #EDF4FE 50%, #F1F7FE 100%);
+    --card-shadow: 0 8px 30px rgba(37, 99, 235, 0.08);
+  }
+
   body {
-    background-color: #E9E7F2;
-    color: #18181B;
+    background-color: var(--theme-shell, #E9E7F2);
+    color: var(--theme-text, #18181B);
     font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     margin: 0;
     padding: 0;
     min-height: 100dvh;
     font-variant-numeric: tabular-nums;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
-  /* Balanced typography & pretty line wrapping */
   h1, h2, h3, h4, h5, h6 {
     text-wrap: balance;
   }
@@ -40,15 +221,15 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #D9CFFB;
+  background: var(--theme-secondary, #D9CFFB);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #B9A7F5;
+  background: var(--theme-primary, #B9A7F5);
 }
 
-/* 18. Continuous Corners (Squircle) */
+/* Continuous Corners (Squircle) */
 .rounded-squircle {
   border-radius: 28px;
   corner-shape: squircle;
@@ -59,7 +240,7 @@
   corner-shape: squircle;
 }
 
-/* 13. Hit-slop minimum 44x44px touch targets */
+/* Hit-slop minimum 44x44px touch targets */
 .hit-slop {
   position: relative;
 }
@@ -77,7 +258,7 @@
   pointer-events: auto;
 }
 
-/* 1. Shimmering Skeleton Loader */
+/* Shimmering Skeleton Loader */
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -88,7 +269,7 @@
 }
 
 .skeleton-shimmer {
-  background: linear-gradient(90deg, #F0EDF9 0%, #FAF8FF 50%, #F0EDF9 100%);
+  background: linear-gradient(90deg, var(--theme-p100, #F0EDF9) 0%, var(--theme-card, #FAF8FF) 50%, var(--theme-p100, #F0EDF9) 100%);
   background-size: 200% 100%;
   animation: shimmer 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
@@ -99,14 +280,14 @@
   animation: shimmer 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-/* 6. View Transitions API Animation Support */
+/* View Transitions API Animation Support */
 @keyframes fade-in {
   from { opacity: 0; transform: scale(0.98); }
   to { opacity: 1; transform: scale(1); }
 }
 
 @keyframes fade-out {
-  from { opacity: 1; transform: scale(1); }
+  from { opacity: 1; transform: scale(0.98); }
   to { opacity: 0; transform: scale(0.98); }
 }
 
@@ -127,27 +308,27 @@
 
 /* Glass & Card Effects */
 .card-base {
-  background: #FFFFFF;
+  background: var(--theme-card, #FFFFFF);
   border-radius: 28px;
-  box-shadow: 0 8px 30px rgba(120, 100, 180, 0.07);
-  border: 1px solid rgba(235, 231, 245, 0.85);
+  box-shadow: var(--theme-shadow-soft, 0 8px 30px rgba(120, 100, 180, 0.07));
+  border: 1px solid var(--theme-card-border, rgba(235, 231, 245, 0.85));
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .card-base:hover {
-  box-shadow: 0 14px 38px rgba(120, 100, 180, 0.12);
+  box-shadow: var(--theme-shadow-lift, 0 14px 38px rgba(120, 100, 180, 0.12));
 }
 
 /* Hero Gradient */
 .hero-gradient {
-  background: linear-gradient(135deg, #DDD2FD 0%, #EFEAFF 50%, #F6F3FF 100%);
-  border: 1px solid rgba(200, 185, 250, 0.45);
+  background: var(--theme-hero-gradient, linear-gradient(135deg, #DDD2FD 0%, #EFEAFF 50%, #F6F3FF 100%));
+  border: 1px solid var(--theme-card-border, rgba(200, 185, 250, 0.45));
 }
 
-/* Purple 3D flower gradient */
+/* 3D flower gradient using theme primary */
 .flower-petal {
-  background: radial-gradient(circle at 30% 30%, #A88FFC 0%, #7C5CFA 70%, #5B35E8 100%);
-  box-shadow: 0 10px 25px rgba(124, 92, 250, 0.35);
+  background: radial-gradient(circle at 30% 30%, var(--theme-secondary, #A88FFC) 0%, var(--theme-primary, #7C5CFA) 70%, var(--theme-p800, #5B35E8) 100%);
+  box-shadow: 0 10px 25px var(--theme-primary-glow, rgba(124, 92, 250, 0.35));
 }
 
 .flower-core {

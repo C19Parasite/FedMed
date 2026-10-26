@@ -9,16 +9,25 @@ import {
   Moon,
   Sun,
   Keyboard,
+  Settings,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDashboardStore } from '../store/useDashboardStore';
 import { transitionView } from '../lib/viewTransitions';
 import { ShortcutBadge } from './CommandMenu';
+import { BrandLogo } from './BrandLogo';
 
 export const Sidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { darkMode, toggleDarkMode, nodes } = useDashboardStore();
+  const {
+    darkMode,
+    toggleDarkMode,
+    nodes,
+    openSettingsModal,
+    activeLogoId,
+    previewLogoId,
+  } = useDashboardStore();
 
   const [isNodesHovered, setIsNodesHovered] = useState(false);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -64,6 +73,8 @@ export const Sidebar: React.FC = () => {
     transitionView(() => navigate(path));
   };
 
+  const currentLogo = previewLogoId || activeLogoId;
+
   return (
     <>
       {/* Desktop Persistent Fixed / Sticky Sidebar (Always in same location while main view scrolls) */}
@@ -79,7 +90,7 @@ export const Sidebar: React.FC = () => {
             aria-label="FedMed Home"
           >
             <div className="relative flex items-center justify-center">
-              <span className="text-xl select-none">🧠</span>
+              <BrandLogo variant={currentLogo} size={26} />
               <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 bg-mint-400 border-2 border-surface-dark rounded-full" />
             </div>
           </button>
@@ -193,6 +204,16 @@ export const Sidebar: React.FC = () => {
 
         {/* Bottom Actions */}
         <div className="flex flex-col items-center gap-3 pt-4 border-t border-zinc-800/80 w-full">
+          {/* Appearance & Theme Settings Trigger */}
+          <button
+            onClick={openSettingsModal}
+            className="w-10 h-10 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800/60 flex items-center justify-center transition-colors hit-slop cursor-pointer"
+            title="Appearance & Theme Settings"
+            aria-label="Appearance & Theme Settings"
+          >
+            <Settings size={18} />
+          </button>
+
           {/* Shortcuts Cheat Sheet Trigger */}
           <button
             onClick={() => {
@@ -219,7 +240,7 @@ export const Sidebar: React.FC = () => {
 
       {/* Mobile Persistent Bottom Tab Bar with Safe-Area Insets */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface-dark dark:bg-surface-darker text-white border-t border-zinc-800/80 px-4 py-2 flex items-center justify-around pb-[env(safe-area-inset-bottom)] shadow-2xl backdrop-blur-md"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface-dark dark:bg-surface-darker text-white border-t border-zinc-800/80 px-3 py-2 flex items-center justify-around pb-[env(safe-area-inset-bottom)] shadow-2xl backdrop-blur-md"
         aria-label="Mobile Bottom Navigation"
       >
         {navItems.map((item) => {
@@ -232,16 +253,26 @@ export const Sidebar: React.FC = () => {
             <button
               key={item.path}
               onClick={() => handleNavClick(item.path)}
-              className={`p-2.5 rounded-2xl flex flex-col items-center justify-center gap-1 hit-slop transition-all cursor-pointer ${
+              className={`p-2 rounded-2xl flex flex-col items-center justify-center gap-1 hit-slop transition-all cursor-pointer ${
                 isActive ? 'text-lavender-400' : 'text-zinc-400 hover:text-white'
               }`}
               aria-label={item.label}
             >
-              <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-              <span className="text-[10px] font-bold">{item.label.split(' ')[0]}</span>
+              <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+              <span className="text-[9px] font-bold">{item.label.split(' ')[0]}</span>
             </button>
           );
         })}
+
+        {/* Mobile Settings Icon */}
+        <button
+          onClick={openSettingsModal}
+          className="p-2 rounded-2xl flex flex-col items-center justify-center gap-1 hit-slop text-zinc-400 hover:text-white transition-all cursor-pointer"
+          aria-label="Theme Settings"
+        >
+          <Settings size={18} />
+          <span className="text-[9px] font-bold">Theme</span>
+        </button>
       </nav>
     </>
   );

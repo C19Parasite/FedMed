@@ -13,6 +13,7 @@ import {
   FileSpreadsheet,
   RotateCcw,
   Search,
+  Palette,
 } from 'lucide-react';
 import { useDashboardStore } from '../store/useDashboardStore';
 import { transitionView } from '../lib/viewTransitions';
@@ -40,6 +41,7 @@ export const CommandMenu: React.FC = () => {
     rounds,
     nodes,
     setSelectedRound,
+    openSettingsModal,
   } = useDashboardStore();
 
   useEffect(() => {
@@ -157,6 +159,17 @@ export const CommandMenu: React.FC = () => {
 
             {/* Quick Actions Group */}
             <Command.Group heading={<span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-2 py-1 block mt-2">Actions</span>}>
+              <Command.Item
+                onSelect={() => runAction(() => openSettingsModal())}
+                className="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-lavender-100 dark:hover:bg-zinc-800 cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Palette size={15} className="text-lavender-600" />
+                  <span>Appearance & Color Themes</span>
+                </div>
+                <ShortcutBadge keys={['T', 'H']} />
+              </Command.Item>
+
               <Command.Item
                 onSelect={() =>
                   runAction(() => {

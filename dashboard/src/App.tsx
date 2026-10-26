@@ -8,6 +8,7 @@ import { SegmentationModal } from './components/SegmentationModal';
 import { CommandMenu } from './components/CommandMenu';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { TwoFactorAuthModal } from './components/TwoFactorAuthModal';
+import { ThemeSettingsModal } from './components/ThemeSettingsModal';
 import { OverviewPage } from './pages/OverviewPage';
 import { NodesPage } from './pages/NodesPage';
 import { RoundsPage } from './pages/RoundsPage';
@@ -83,6 +84,9 @@ export const App: React.FC = () => {
             onSuccess={handle2FASuccess}
             title="Authorize Federated Training Round"
           />
+
+          {/* Interactive Appearance, Color Theme & Brand Logo Modal */}
+          <ThemeSettingsModal />
 
           {/* Live Region Announcements for Screen Readers (Item 16) */}
           <div
