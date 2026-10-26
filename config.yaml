@@ -1,0 +1,149 @@
+# FedMed: Unified Configuration File
+# Governs baseline, federated orchestration, security, differential privacy, homomorphic encryption, and live metrics.
+
+debug: true  # Debug mode: tiny dataset subset, 16x16x16 patch, small model channels, runs under 3 min on CPU
+
+server:
+  host: "127.0.0.1"
+  port: 8080
+  address: "127.0.0.1:8080"
+  rounds: 3
+  debug_rounds: 2
+  min_fit_clients: 2         # Accepts partial results for node dropout resilience (Phase 5)
+  min_available_clients: 3   # Initial required pool
+  fraction_fit: 1.0
+  fraction_evaluate: 1.0
+  save_checkpoint_every_round: true
+  checkpoint_dir: "checkpoints/federated"
+
+hospitals:
+  - id: "hospital_1"
+    name: "General Hospital Scribe"
+    port: 8081
+    local_epochs: 1
+    lr: 0.0002
+  - id: "hospital_2"
+    name: "University Health Alliance"
+    port: 8082
+    local_epochs: 1
+    lr: 0.0002
+  - id: "hospital_3"
+    name: "Memorial Cancer Institute"
+    port: 8083
+    local_epochs: 1
+    lr: 0.0002
+
+partition:
+  mode: "iid"                # "iid" (equal balanced split) or "non_iid" (e.g. 50/30/20)
+  proportions: [0.50, 0.30, 0.20]
+  local_val_ratio: 0.20      # Private local validation holdout per hospital
+  global_val_ratio: 0.15     # Server-only global evaluation holdout
+  manifest_path: "partitions/partition_manifest.json"
+
+data:
+  source: "synthetic"        # "synthetic" (auto-generated reproducible MRI) or "brats"
+  root_dir: "data"
+  task: "Task01_BrainTumour"
+  download: false
+  label_scheme: "auto"
+  label_maps:
+    msd:
+      tc: [2, 3]
+      wt: [1, 2, 3]
+      et: [2]
+    brats:
+      tc: [1, 4]
+      wt: [1, 2, 4]
+      et: [4]
+  dataset_type: "cache"
+  cache_rate: 1.0
+  cache_dir: "data/cache"
+  splits_path: "data/splits.json"
+  metadata_path: "data/metadata.json"
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+  roi_size: [32, 32, 32]
+  debug_roi_size: [16, 16, 16]
+  batch_size: 2
+  debug_batch_size: 1
+  val_batch_size: 1
+  test_batch_size: 1
+  num_workers: 0
+  pin_memory: false
+  num_samples: 1
+  pos: 1.0
+  neg: 1.0
+  flip_prob: 0.0
+  scale_intensity_factor: 0.0
+  shift_intensity_offset: 0.0
+  spacing: [1.0, 1.0, 1.0]
+  orientation: "RAS"
+  synthetic:
+    num_patients: 12
+    debug_num_patients: 6
+    spatial_size: [32, 32, 32]
+    debug_spatial_size: [16, 16, 16]
+
+model:
+  name: "monai_unet"
+  in_channels: 4
+  out_channels: 3
+  channels: [16, 32, 64]
+  debug_channels: [4, 8, 16]
+  he_channels: [4, 8, 16]    # Lightweight profile for CKKS homomorphic encryption
+  strides: [2, 2]
+  norm: "INSTANCE"           # InstanceNorm or GroupNorm (BatchNorm strictly banned in FL)
+  dropout: 0.1
+
+training:
+  epochs: 1
+  lr: 0.0002
+  weight_decay: 0.00001
+  loss: "dice_ce"
+  device: "cpu"
+
+# Security: Transport Layer Security (Phase 4)
+tls:
+  enabled: false
+  ca_cert: "certs/ca.crt"
+  server_cert: "certs/server.crt"
+  server_key: "certs/server.key"
+
+# Privacy: TenSEAL CKKS Homomorphic Encryption (Phase 6)
+he:
+  enabled: false
+  poly_modulus_degree: 8192
+  coeff_mod_bit_sizes: [60, 40, 40, 60]
+  scale_bits: 40
+  keys_dir: "keys"
+  public_context: "keys/server_context.tenseal"
+  secret_context: "keys/hospital_context.tenseal"
+  profile: "small"           # "small" uses lightweight channel profile to keep ciphertext practical
+
+# Privacy: Differential Privacy (Phase 7)
+dp:
+  enabled: false
+  clip_norm: 1.0
+  noise_multiplier: 1.0
+  delta: 1.0e-5
+
+# Live Metrics & API (Phase 8 & 9)
+api:
+  host: "127.0.0.1"
+  port: 8000
+  ws_endpoint: "/ws/metrics"
+
+dashboard:
+  demo_cases_count: 3
+  masks_dir: "results/demo_cases"
+
+results:
+  metrics_csv: "results/metrics.csv"
+  metrics_json: "results/metrics.json"
+  baseline_json: "results/baseline.json"
+  ablation_csv: "results/ablation.csv"
+  ablation_md: "results/ablation.md"
+  he_overhead_md: "results/he_overhead.md"
+
+seed: 42
