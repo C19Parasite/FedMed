@@ -1,0 +1,20 @@
+[
+  {
+    "id": "demo_case_1",
+    "label": "Public BraTS Demo Case #1",
+    "dataset_note": "Research cohort test case (zero private hospital patient data)",
+    "depth_slices": 32,
+    "dice": {
+      "dice_tc": 0.0215,
+      "dice_wt": 0.0294,
+      "dice_et": 0.013,
+      "dice_mean": 0.0213
+    },
+    "centralized_dice": {
+      "dice_tc": 0.022,
+      "dice_wt": 0.0287,
+      "dice_et": 0.0134,
+      "dice_mean": 0.0214
+    }
+  }
+]

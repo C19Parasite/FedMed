@@ -1,0 +1,80 @@
+[
+  {
+    "event": "round_complete",
+    "round": 1,
+    "global_val_dice": 0.0225,
+    "global_val_loss": 0.9951,
+    "participating_clients": 3,
+    "total_clients": 3,
+    "hospital_metrics": {
+      "hospital_2": {
+        "train_loss": 0.9953,
+        "num_examples": 2.0
+      },
+      "hospital_1": {
+        "train_loss": 0.9957,
+        "num_examples": 2.0
+      },
+      "hospital_3": {
+        "train_loss": 0.9957,
+        "num_examples": 2.0
+      }
+    },
+    "bytes_sent": 0,
+    "bytes_received": 0,
+    "round_duration_sec": 5.16,
+    "privacy": {
+      "tls": false,
+      "he": false,
+      "dp": false,
+      "epsilon": 0.0,
+      "sigma": 0.0
+    },
+    "timestamp": "2026-10-26T10:26:50.339204+00:00",
+    "dice_breakdown": {
+      "dice_tc": 0.022,
+      "dice_wt": 0.0318,
+      "dice_et": 0.0138,
+      "dice_mean": 0.0225
+    }
+  },
+  {
+    "event": "round_complete",
+    "round": 2,
+    "global_val_dice": 0.0226,
+    "global_val_loss": 0.995,
+    "participating_clients": 3,
+    "total_clients": 3,
+    "hospital_metrics": {
+      "hospital_3": {
+        "train_loss": 0.9955,
+        "num_examples": 2.0
+      },
+      "hospital_1": {
+        "train_loss": 0.9956,
+        "num_examples": 2.0
+      },
+      "hospital_2": {
+        "train_loss": 0.9954,
+        "num_examples": 2.0
+      }
+    },
+    "bytes_sent": 0,
+    "bytes_received": 0,
+    "round_duration_sec": 0.06,
+    "privacy": {
+      "tls": false,
+      "he": false,
+      "dp": false,
+      "epsilon": 0.0,
+      "sigma": 0.0
+    },
+    "timestamp": "2026-10-26T10:26:50.423098+00:00",
+    "dice_breakdown": {
+      "dice_tc": 0.0221,
+      "dice_wt": 0.0319,
+      "dice_et": 0.0138,
+      "dice_mean": 0.0226
+    }
+  }
+]

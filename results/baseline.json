@@ -1,0 +1,38 @@
+{
+  "mode": "debug baseline",
+  "val_dice": {
+    "tc": 0.0159,
+    "wt": 0.0331,
+    "et": 0.0107,
+    "mean": 0.0000
+  },
+  "test_dice": {
+    "tc": 0.0227,
+    "wt": 0.0304,
+    "et": 0.0087,
+    "mean": 0.0206
+  },
+  "epochs": 2,
+  "patch_size": [16, 16, 16],
+  "model_config": {
+    "name": "monai_unet",
+    "in_channels": 4,
+    "out_channels": 3,
+    "channels": [16, 32, 64, 128],
+    "norm": "GroupNorm",
+    "parameters": 4812512,
+    "size_mb": 18.3583
+  },
+  "training_time_seconds": 3.42,
+  "checkpoint_path": "outputs/runs/baseline/20261026_093520/checkpoints/best.pt",
+  "environment": {
+    "python": "3.12.10",
+    "torch": "2.14.1+cpu",
+    "monai": "1.6.1",
+    "flwr": "1.39.0",
+    "tenseal": "0.3.18",
+    "cuda_available": false,
+    "platform": "Windows"
+  },
+  "timestamp_utc": "2026-10-26T09:35:23.446055+00:00"
+}

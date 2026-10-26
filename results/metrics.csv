@@ -1,0 +1,3 @@
+round,global_val_dice,global_val_loss,participating_clients,total_clients,bytes_sent,bytes_received,round_duration_sec,tls,he,dp,epsilon,sigma,timestamp
+1,0.0225,0.9951,3,3,0,0,5.16,False,False,False,0.0,0.0,2026-10-26T10:26:50.339204+00:00
+2,0.0226,0.995,3,3,0,0,0.06,False,False,False,0.0,0.0,2026-10-26T10:26:50.423098+00:00
