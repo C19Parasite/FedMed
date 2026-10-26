@@ -2,9 +2,10 @@ import React from 'react';
 import { Plus, ShieldCheck, Sparkles, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useDashboardStore } from '../store/useDashboardStore';
+import { ShortcutBadge } from './CommandMenu';
 
 export const HeroBanner: React.FC = () => {
-  const { startNewRound, rounds } = useDashboardStore();
+  const { open2FAModal, rounds } = useDashboardStore();
   const currentRound = rounds.length > 0 ? rounds[rounds.length - 1].round : 12;
 
   return (
@@ -31,14 +32,18 @@ export const HeroBanner: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-3 mt-5">
           <button
-            onClick={startNewRound}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold bg-surface-dark text-white hover:bg-black shadow-card hover:shadow-lift active:scale-95 transition-all group"
+            onClick={open2FAModal}
+            className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full text-sm font-semibold bg-surface-dark text-white hover:bg-black shadow-card hover:shadow-lift active:scale-95 transition-all group hit-slop"
+            title="Start new federated round (requires 2FA verification code)"
           >
             <Plus size={16} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform duration-200" />
-            <span>Start Round {currentRound + 1}</span>
+            <span className="tabular-nums">Start Round {currentRound + 1}</span>
+            <kbd className="hidden sm:inline-flex items-center text-[10px] font-mono bg-white/20 text-white/90 px-1.5 py-0.5 rounded">
+              N
+            </kbd>
           </button>
 
-          <div className="flex items-center gap-2 text-xs font-semibold text-zinc-500 bg-white/50 backdrop-blur-sm px-3.5 py-2.5 rounded-full border border-lavender-200/60">
+          <div className="flex items-center gap-2 text-xs font-semibold text-zinc-500 bg-white/50 backdrop-blur-sm px-3.5 py-2.5 rounded-full border border-lavender-200/60 tabular-nums">
             <span className="w-2 h-2 rounded-full bg-mint-500 animate-pulse" />
             <span>Target: 30 Rounds</span>
           </div>

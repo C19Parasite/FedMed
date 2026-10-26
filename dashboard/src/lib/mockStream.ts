@@ -290,6 +290,7 @@ export const INITIAL_CASES: SegmentationCase[] = [
     baselineMean: 0.841,
     hospitalSource: 'Hospital A (General Scribe)',
     modality: 'T1ce + FLAIR',
+    blurHash: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzEzMTUxZSIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM1IiBmaWxsPSIjMmEyYTM2Ii8+PC9zdmc+',
   },
   {
     id: 'case_0245',
@@ -304,6 +305,7 @@ export const INITIAL_CASES: SegmentationCase[] = [
     baselineMean: 0.832,
     hospitalSource: 'Hospital B (Univ. Health)',
     modality: 'T2 + FLAIR',
+    blurHash: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzExMTMxYyIvPjxjaXJjbGUgY3g9IjUyIiBjeT0iNDgiIHI9IjMwIiBmaWxsPSIjMjUydTMyIi8+PC9zdmc+',
   },
   {
     id: 'case_0389',
@@ -318,6 +320,7 @@ export const INITIAL_CASES: SegmentationCase[] = [
     baselineMean: 0.855,
     hospitalSource: 'Hospital C (Memorial Cancer)',
     modality: 'T1 + T1ce',
+    blurHash: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzE2MTUxYSIvPjxjaXJjbGUgY3g9IjQ4IiBjeT0iNTIiIHI9IjM0IiBmaWxsPSIjMmMxZTM4Ii8+PC9zdmc+',
   },
   {
     id: 'case_0412',
@@ -332,6 +335,7 @@ export const INITIAL_CASES: SegmentationCase[] = [
     baselineMean: 0.812,
     hospitalSource: 'Hospital A (General Scribe)',
     modality: 'FLAIR Multi-contrast',
+    blurHash: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzE0MTMyMCIvPjxjaXJjbGUgY3g9IjUxIiBjeT0iNDkiIHI9IjMyIiBmaWxsPSIjMjAxZTM0Ii8+PC9zdmc+',
   },
   {
     id: 'case_0567',
@@ -346,6 +350,7 @@ export const INITIAL_CASES: SegmentationCase[] = [
     baselineMean: 0.849,
     hospitalSource: 'Hospital B (Univ. Health)',
     modality: 'T1ce Post-Gadolinium',
+    blurHash: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzEzMTUxZSIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM1IiBmaWxsPSIjMmEyYTM2Ii8+PC9zdmc+',
   },
 ];
 

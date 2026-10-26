@@ -41,6 +41,14 @@ export const SegmentationCarousel: React.FC = () => {
           >
             {/* Simulated MRI Slice with Tumor Mask Overlay Thumbnail */}
             <div className="relative w-full aspect-square bg-[#07090E] rounded-xl overflow-hidden border border-zinc-800 flex items-center justify-center">
+              {/* BlurHash Micro-placeholder */}
+              {caseItem.blurHash && (
+                <div
+                  className="absolute inset-0 bg-cover bg-center filter blur-sm scale-110 opacity-70"
+                  style={{ backgroundImage: `url(${caseItem.blurHash})` }}
+                  aria-hidden="true"
+                />
+              )}
               {/* Brain MRI Simulated Background */}
               <div className="absolute inset-2 rounded-full bg-gradient-to-tr from-zinc-800 via-zinc-700 to-zinc-900 opacity-80" />
               <div className="absolute w-20 h-24 rounded-full bg-zinc-600/40 blur-[2px]" />

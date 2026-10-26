@@ -65,6 +65,7 @@ export interface SegmentationCase {
   hospitalSource: string;
   modality: string;
   previewUrl?: string;
+  blurHash?: string;
 }
 
 export interface NotificationEvent {

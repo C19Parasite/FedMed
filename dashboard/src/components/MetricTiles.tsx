@@ -45,7 +45,7 @@ export const MetricTiles: React.FC = () => {
 
         <div className="mt-3">
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl lg:text-5xl font-extrabold text-zinc-900 dark:text-white font-sans tracking-tight">
+            <span className="text-4xl lg:text-5xl font-extrabold text-zinc-900 dark:text-white font-sans tracking-tight tabular-nums">
               {currentDice.toFixed(3)}
             </span>
             <span className="text-xs font-bold text-zinc-400 font-mono">
@@ -62,7 +62,7 @@ export const MetricTiles: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-4 pt-3 border-t border-brand-border/60 dark:border-zinc-800 flex items-center justify-between text-xs font-semibold">
+        <div className="mt-4 pt-3 border-t border-brand-border/60 dark:border-zinc-800 flex items-center justify-between text-xs font-semibold tabular-nums">
           <span className="flex items-center gap-1 text-mint-600 dark:text-mint-400">
             <TrendingUp size={14} />
             <span>+{((diceDiff) * 100).toFixed(1)}% vs Baseline</span>
@@ -87,7 +87,7 @@ export const MetricTiles: React.FC = () => {
 
         <div className="mt-3">
           <div className="flex items-baseline justify-between">
-            <span className="text-4xl lg:text-5xl font-extrabold text-zinc-900 dark:text-white font-sans tracking-tight">
+            <span className="text-4xl lg:text-5xl font-extrabold text-zinc-900 dark:text-white font-sans tracking-tight tabular-nums">
               {currentLoss.toFixed(4)}
             </span>
 

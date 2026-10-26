@@ -15,6 +15,17 @@
     font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     margin: 0;
     padding: 0;
+    min-height: 100dvh;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Balanced typography & pretty line wrapping */
+  h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
+  }
+
+  p, li, td, span {
+    text-wrap: pretty;
   }
 }
 
@@ -37,12 +48,89 @@
   background: #B9A7F5;
 }
 
+/* 18. Continuous Corners (Squircle) */
+.rounded-squircle {
+  border-radius: 28px;
+  corner-shape: squircle;
+}
+
+.rounded-squircle-sm {
+  border-radius: 18px;
+  corner-shape: squircle;
+}
+
+/* 13. Hit-slop minimum 44x44px touch targets */
+.hit-slop {
+  position: relative;
+}
+
+.hit-slop::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 44px;
+  min-height: 44px;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+}
+
+/* 1. Shimmering Skeleton Loader */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #F0EDF9 0%, #FAF8FF 50%, #F0EDF9 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.dark .skeleton-shimmer {
+  background: linear-gradient(90deg, #1C1C24 0%, #292934 50%, #1C1C24 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* 6. View Transitions API Animation Support */
+@keyframes fade-in {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.98); }
+}
+
+::view-transition-old(root) {
+  animation: 180ms cubic-bezier(0.4, 0, 1, 1) both fade-out;
+}
+
+::view-transition-new(root) {
+  animation: 240ms cubic-bezier(0, 0, 0.2, 1) both fade-in;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
+
 /* Glass & Card Effects */
 .card-base {
   background: #FFFFFF;
-  border-radius: 24px;
+  border-radius: 28px;
   box-shadow: 0 8px 30px rgba(120, 100, 180, 0.07);
-  border: 1px solid rgba(235, 231, 245, 0.8);
+  border: 1px solid rgba(235, 231, 245, 0.85);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

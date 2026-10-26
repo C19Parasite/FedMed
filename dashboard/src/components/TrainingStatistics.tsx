@@ -78,7 +78,7 @@ export const TrainingStatistics: React.FC = () => {
           <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
             Progress Completed
           </span>
-          <div className="flex items-baseline gap-2 mt-1">
+          <div className="flex items-baseline gap-2 mt-1 tabular-nums">
             <span className="text-3xl lg:text-4xl font-extrabold text-zinc-900 dark:text-white font-sans">
               Round {currentRound}
             </span>
@@ -97,7 +97,7 @@ export const TrainingStatistics: React.FC = () => {
             <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
               Nodes Active
             </span>
-            <span className="text-base font-extrabold text-zinc-900 dark:text-white">
+            <span className="text-base font-extrabold text-zinc-900 dark:text-white tabular-nums">
               {activeNodesCount} / {nodes.length} Silos
             </span>
           </div>
@@ -112,7 +112,7 @@ export const TrainingStatistics: React.FC = () => {
             <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
               Encrypted Updates
             </span>
-            <span className="text-base font-extrabold text-zinc-900 dark:text-white">
+            <span className="text-base font-extrabold text-zinc-900 dark:text-white tabular-nums">
               {encryptedUpdatesCount} Ciphertexts
             </span>
           </div>

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Layers, Sliders, ShieldCheck, Eye, Sparkles } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { useDashboardStore } from '../store/useDashboardStore';
+import { BlurImage } from './BlurImage';
 
 export const SegmentationModal: React.FC = () => {
-  const { isModalOpen, activeModalCase, closeModal } = useDashboardStore();
+  const { isModalOpen, activeModalCase, closeModal, cases, openModal } = useDashboardStore();
 
   const [plane, setPlane] = useState<'axial' | 'sagittal' | 'coronal'>('axial');
   const [sliceZ, setSliceZ] = useState<number>(16);
@@ -13,21 +14,78 @@ export const SegmentationModal: React.FC = () => {
   const [showTC, setShowTC] = useState<boolean>(true);
   const [showET, setShowET] = useState<boolean>(true);
 
+  // 12. Predictive back: Sync modal state to URL query parameter (?case=...)
+  useEffect(() => {
+    if (activeModalCase && isModalOpen) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('case', activeModalCase.id);
+      window.history.pushState({ modalOpen: true, caseId: activeModalCase.id }, '', url.toString());
+
+      const handlePopState = () => {
+        closeModal();
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
+    } else {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('case')) {
+        url.searchParams.delete('case');
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
+  }, [activeModalCase, isModalOpen, closeModal]);
+
+  // Handle URL deep-link on mount
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const caseId = url.searchParams.get('case');
+    if (caseId && !isModalOpen) {
+      const found = cases.find((c) => c.id === caseId);
+      if (found) {
+        openModal(found);
+      }
+    }
+  }, [cases, isModalOpen, openModal]);
+
   if (!isModalOpen || !activeModalCase) return null;
+
+  // 10. Swipe-to-dismiss bottom sheet handler on mobile
+  const handleDragEnd = (_e: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    if (info.offset.y > 140 || info.velocity.y > 500) {
+      closeModal();
+    }
+  };
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div
+        className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-black/60 backdrop-blur-sm"
+        onClick={closeModal}
+      >
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className="w-full max-w-4xl bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-brand-border dark:border-zinc-800 overflow-hidden flex flex-col max-h-[92vh]"
+          initial={{ opacity: 0, y: 80, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 100, scale: 0.96 }}
+          transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+          drag="y"
+          dragConstraints={{ top: 0 }}
+          dragElastic={{ top: 0, bottom: 0.4 }}
+          onDragEnd={handleDragEnd}
+          onClick={(e) => e.stopPropagation()}
+          className="w-full max-w-4xl bg-white dark:bg-zinc-900 rounded-t-[36px] md:rounded-squircle shadow-2xl border border-brand-border dark:border-zinc-800 overflow-hidden flex flex-col max-h-[92dvh] touch-pan-y"
         >
+          {/* Mobile Sheet Drag Handle */}
+          <div className="md:hidden flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
+            <div className="w-12 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
+          </div>
+
           {/* Header */}
           <div className="px-6 py-4 border-b border-brand-border dark:border-zinc-800 flex items-center justify-between bg-surface-soft dark:bg-zinc-800/40">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-lavender-100 dark:bg-lavender-900/40 text-lavender-700 dark:text-lavender-300 flex items-center justify-center font-bold">
+              <div className="w-10 h-10 rounded-2xl bg-lavender-100 dark:bg-lavender-900/40 text-lavender-700 dark:text-lavender-300 flex items-center justify-center font-bold">
                 <Layers size={18} />
               </div>
               <div>
@@ -35,7 +93,7 @@ export const SegmentationModal: React.FC = () => {
                   <h3 className="text-base font-bold text-zinc-900 dark:text-white">
                     {activeModalCase.title}
                   </h3>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-mint-100 text-mint-700 dark:bg-mint-900/40 dark:text-mint-300">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-mint-100 text-mint-700 dark:bg-mint-900/40 dark:text-mint-300 tabular-nums">
                     Mean Dice: {(activeModalCase.diceMean * 100).toFixed(1)}%
                   </span>
                 </div>
@@ -47,7 +105,8 @@ export const SegmentationModal: React.FC = () => {
 
             <button
               onClick={closeModal}
-              className="w-8 h-8 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-400 hover:text-zinc-700 dark:hover:text-white flex items-center justify-center transition-colors"
+              className="w-9 h-9 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-400 hover:text-zinc-700 dark:hover:text-white flex items-center justify-center transition-colors hit-slop"
+              aria-label="Close Modal"
             >
               <X size={18} />
             </button>
@@ -71,7 +130,7 @@ export const SegmentationModal: React.FC = () => {
                   <button
                     key={p}
                     onClick={() => setPlane(p)}
-                    className={`px-4 py-1.5 rounded-xl text-xs font-bold capitalize transition-all ${
+                    className={`px-4 py-1.5 rounded-xl text-xs font-bold capitalize transition-all hit-slop ${
                       plane === p
                         ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-sm'
                         : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
@@ -84,7 +143,7 @@ export const SegmentationModal: React.FC = () => {
 
               {/* Subregion Color Legend Toggles */}
               <div className="flex items-center gap-3 text-xs">
-                <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                <label className="flex items-center gap-1.5 cursor-pointer select-none hit-slop">
                   <input
                     type="checkbox"
                     checked={showWT}
@@ -94,7 +153,7 @@ export const SegmentationModal: React.FC = () => {
                   <span className="font-semibold text-mint-600">Whole Tumor (WT)</span>
                 </label>
 
-                <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                <label className="flex items-center gap-1.5 cursor-pointer select-none hit-slop">
                   <input
                     type="checkbox"
                     checked={showTC}
@@ -104,7 +163,7 @@ export const SegmentationModal: React.FC = () => {
                   <span className="font-semibold text-amber-600">Tumor Core (TC)</span>
                 </label>
 
-                <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                <label className="flex items-center gap-1.5 cursor-pointer select-none hit-slop">
                   <input
                     type="checkbox"
                     checked={showET}
@@ -127,8 +186,15 @@ export const SegmentationModal: React.FC = () => {
                   <span className="text-[11px] font-mono text-zinc-400">Manual Contours</span>
                 </div>
 
-                <div className="relative w-full aspect-square bg-[#06080D] rounded-2xl overflow-hidden border border-zinc-800 shadow-inner flex items-center justify-center">
-                  {/* Simulated Brain Slice Anatomy */}
+                <div className="relative w-full aspect-square bg-[#06080D] rounded-3xl overflow-hidden border border-zinc-800 shadow-inner flex items-center justify-center">
+                  {/* Simulated Brain Slice Anatomy with BlurHash Placeholder */}
+                  {activeModalCase.blurHash && (
+                    <BlurImage
+                      blurPlaceholder={activeModalCase.blurHash}
+                      alt="Brain MRI Anatomy"
+                      containerClassName="absolute inset-0 w-full h-full"
+                    />
+                  )}
                   <div className="absolute inset-4 rounded-full bg-gradient-to-tr from-zinc-800 via-zinc-700 to-zinc-900 opacity-80" />
                   <div className="absolute w-44 h-52 rounded-full bg-zinc-600/30 blur-[2px]" />
 
@@ -164,12 +230,12 @@ export const SegmentationModal: React.FC = () => {
                   <span className="text-xs font-bold text-lavender-700 dark:text-lavender-400 uppercase tracking-wider">
                     FedMed 3D U-Net Output
                   </span>
-                  <span className="text-[11px] font-mono text-mint-600 font-bold">
+                  <span className="text-[11px] font-mono text-mint-600 font-bold tabular-nums">
                     Dice: {(activeModalCase.diceMean * 100).toFixed(1)}%
                   </span>
                 </div>
 
-                <div className="relative w-full aspect-square bg-[#06080D] rounded-2xl overflow-hidden border border-lavender-400/40 shadow-inner flex items-center justify-center">
+                <div className="relative w-full aspect-square bg-[#06080D] rounded-3xl overflow-hidden border border-lavender-400/40 shadow-inner flex items-center justify-center">
                   {/* Simulated Brain Slice Anatomy */}
                   <div className="absolute inset-4 rounded-full bg-gradient-to-tr from-zinc-800 via-zinc-700 to-zinc-900 opacity-80" />
                   <div className="absolute w-44 h-52 rounded-full bg-zinc-600/30 blur-[2px]" />
@@ -207,7 +273,7 @@ export const SegmentationModal: React.FC = () => {
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs font-semibold">
                   <span className="text-zinc-600 dark:text-zinc-300">Volumetric Slice (Z):</span>
-                  <span className="font-mono text-lavender-600 font-bold">
+                  <span className="font-mono text-lavender-600 font-bold tabular-nums">
                     {sliceZ} / {activeModalCase.depthSlices}
                   </span>
                 </div>
@@ -217,7 +283,7 @@ export const SegmentationModal: React.FC = () => {
                   max={activeModalCase.depthSlices}
                   value={sliceZ}
                   onChange={(e) => setSliceZ(parseInt(e.target.value, 10))}
-                  className="w-full accent-lavender-600 cursor-pointer"
+                  className="w-full accent-lavender-600 cursor-pointer hit-slop"
                 />
               </div>
 
@@ -225,7 +291,7 @@ export const SegmentationModal: React.FC = () => {
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs font-semibold">
                   <span className="text-zinc-600 dark:text-zinc-300">Tumor Overlay Opacity:</span>
-                  <span className="font-mono text-mint-600 font-bold">
+                  <span className="font-mono text-mint-600 font-bold tabular-nums">
                     {Math.round(maskOpacity * 100)}%
                   </span>
                 </div>
@@ -236,7 +302,7 @@ export const SegmentationModal: React.FC = () => {
                   step={0.05}
                   value={maskOpacity}
                   onChange={(e) => setMaskOpacity(parseFloat(e.target.value))}
-                  className="w-full accent-mint-500 cursor-pointer"
+                  className="w-full accent-mint-500 cursor-pointer hit-slop"
                 />
               </div>
             </div>

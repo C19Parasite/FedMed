@@ -16,9 +16,11 @@ interface DashboardStore {
   notificationTab: 'overview' | 'nodes' | 'security';
   activeModalCase: SegmentationCase | null;
   isModalOpen: boolean;
+  is2FAModalOpen: boolean;
   connectionStatus: 'connected' | 'reconnecting' | 'mock' | 'disconnected';
   isMockMode: boolean;
   darkMode: boolean;
+  announcement: string;
 
   // Actions
   handleWebSocketMessage: (msg: WebSocketMessage) => void;
@@ -27,10 +29,16 @@ interface DashboardStore {
   setNotificationTab: (tab: 'overview' | 'nodes' | 'security') => void;
   openModal: (caseItem: SegmentationCase) => void;
   closeModal: () => void;
+  open2FAModal: () => void;
+  close2FAModal: () => void;
+  clearNotifications: () => void;
+  restoreNotifications: (items: NotificationEvent[]) => void;
+  toggleNodeStatus: (nodeId: string) => void;
   toggleMockMode: () => void;
   setConnectionStatus: (status: 'connected' | 'reconnecting' | 'mock' | 'disconnected') => void;
   toggleDarkMode: () => void;
   startNewRound: () => void;
+  setAnnouncement: (text: string) => void;
 }
 
 export const useDashboardStore = create<DashboardStore>((set, get) => ({
@@ -45,9 +53,11 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   notificationTab: 'overview',
   activeModalCase: null,
   isModalOpen: false,
+  is2FAModalOpen: false,
   connectionStatus: 'mock',
   isMockMode: true,
   darkMode: false,
+  announcement: '',
 
   handleWebSocketMessage: (msg: WebSocketMessage) => {
     if (msg.type === 'metrics') {
@@ -77,7 +87,10 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
           ? state.rounds.map((r, i) => (i === existingIdx ? newEntry : r))
           : [...state.rounds, newEntry];
 
-        return { rounds: updatedRounds };
+        return {
+          rounds: updatedRounds,
+          announcement: `Round ${round} completed: Dice ${(dice * 100).toFixed(1)}%, Loss ${global_loss.toFixed(3)}.`,
+        };
       });
     } else if (msg.type === 'node_status') {
       const { node, status, samples } = msg;
@@ -94,6 +107,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
           }
           return n;
         }),
+        announcement: `Node ${node} status changed to ${status}. Quorum maintained.`,
       }));
     } else if (msg.type === 'privacy') {
       const { epsilon, delta, noise_sigma } = msg;
@@ -104,6 +118,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
           delta,
           noise_sigma,
         },
+        announcement: `Privacy budget updated: epsilon ${epsilon.toFixed(2)}, delta 1e-5.`,
       }));
     } else if (msg.type === 'event') {
       const newNotif: NotificationEvent = {
@@ -117,6 +132,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
 
       set((state) => ({
         notifications: [newNotif, ...state.notifications.slice(0, 19)],
+        announcement: `Alert: ${newNotif.title} - ${newNotif.message}`,
       }));
     }
   },
@@ -126,6 +142,30 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   setNotificationTab: (tab) => set({ notificationTab: tab }),
   openModal: (caseItem) => set({ activeModalCase: caseItem, isModalOpen: true }),
   closeModal: () => set({ activeModalCase: null, isModalOpen: false }),
+  open2FAModal: () => set({ is2FAModalOpen: true }),
+  close2FAModal: () => set({ is2FAModalOpen: false }),
+
+  clearNotifications: () => set({ notifications: [] }),
+  restoreNotifications: (items) => set({ notifications: items }),
+
+  toggleNodeStatus: (nodeId) => {
+    set((state) => ({
+      nodes: state.nodes.map((n) => {
+        if (n.id === nodeId) {
+          const nextStatus = n.status === 'offline' ? 'online' : 'offline';
+          return {
+            ...n,
+            status: nextStatus,
+            isDropped: nextStatus === 'offline',
+            lastUpdate: 'Just now',
+          };
+        }
+        return n;
+      }),
+    }));
+  },
+
+  setAnnouncement: (text) => set({ announcement: text }),
 
   toggleMockMode: () => {
     set((state) => ({

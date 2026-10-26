@@ -1,8 +1,9 @@
 import React from 'react';
-import { Hospital, Settings, Activity, WifiOff, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Hospital, Settings, Activity, WifiOff, CheckCircle2, ShieldAlert, Power } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useDashboardStore } from '../store/useDashboardStore';
 import { HospitalNode } from '../types';
+import { toast } from 'sonner';
 
 export const HospitalNodesRow: React.FC = () => {
   const { nodes } = useDashboardStore();
@@ -26,7 +27,7 @@ export const HospitalNodesRow: React.FC = () => {
         </div>
 
         <button
-          className="w-8 h-8 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 flex items-center justify-center transition-colors"
+          className="w-8 h-8 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 flex items-center justify-center transition-colors hit-slop"
           title="Node Configuration"
           aria-label="Node Settings"
         >
@@ -50,8 +51,29 @@ interface NodeCardProps {
 }
 
 const NodeCard: React.FC<NodeCardProps> = ({ node, index }) => {
+  const { toggleNodeStatus } = useDashboardStore();
   const isOffline = node.status === 'offline';
   const isTraining = node.status === 'training';
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const willBeOffline = !isOffline;
+    toggleNodeStatus(node.id);
+
+    toast(willBeOffline ? `${node.name} disconnected` : `${node.name} reconnected`, {
+      description: willBeOffline
+        ? 'Simulated failure: node dropped from round; quorum held at 2/3.'
+        : 'Node resumed participation in federated aggregation.',
+      duration: 6000,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          toggleNodeStatus(node.id);
+          toast.success(`Restored state for ${node.name}`);
+        },
+      },
+    });
+  };
 
   // Specific initials and color accents per hospital
   const avatars: Record<string, { initials: string; bg: string; text: string }> = {
@@ -97,21 +119,32 @@ const NodeCard: React.FC<NodeCardProps> = ({ node, index }) => {
           </div>
         </div>
 
-        {/* Status indicator dot */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          {isOffline ? (
-            <span className="w-2.5 h-2.5 rounded-full bg-zinc-400" />
-          ) : isTraining ? (
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lavender-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-lavender-600" />
+        {/* Status indicator dot and action button */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5">
+            {isOffline ? (
+              <span className="w-2.5 h-2.5 rounded-full bg-zinc-400" />
+            ) : isTraining ? (
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lavender-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-lavender-600" />
+              </span>
+            ) : (
+              <span className="w-2.5 h-2.5 rounded-full bg-mint-500 shadow-sm" />
+            )}
+            <span className="text-[11px] font-semibold capitalize text-zinc-600 dark:text-zinc-300">
+              {node.status}
             </span>
-          ) : (
-            <span className="w-2.5 h-2.5 rounded-full bg-mint-500 shadow-sm" />
-          )}
-          <span className="text-[11px] font-semibold capitalize text-zinc-600 dark:text-zinc-300">
-            {node.status}
-          </span>
+          </div>
+
+          <button
+            onClick={handleToggle}
+            className="w-7 h-7 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 flex items-center justify-center transition-colors hit-slop"
+            title={isOffline ? 'Reconnect silo node' : 'Simulate node drop (resilience)'}
+            aria-label="Toggle node connection"
+          >
+            <Power size={13} className={isOffline ? 'text-coral-500' : 'text-mint-600'} />
+          </button>
         </div>
       </div>
 

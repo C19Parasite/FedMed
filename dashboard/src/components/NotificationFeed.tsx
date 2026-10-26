@@ -1,15 +1,33 @@
 import React from 'react';
-import { Bell, CheckCircle2, AlertTriangle, ShieldCheck, Info } from 'lucide-react';
+import { Bell, CheckCircle2, AlertTriangle, ShieldCheck, Info, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDashboardStore } from '../store/useDashboardStore';
 import { NotificationEvent } from '../types';
+import { toast } from 'sonner';
 
 export const NotificationFeed: React.FC = () => {
-  const { notifications, notificationTab, setNotificationTab } = useDashboardStore();
+  const { notifications, notificationTab, setNotificationTab, clearNotifications, restoreNotifications } = useDashboardStore();
 
   const filteredNotifications = notifications.filter(
     (n) => notificationTab === 'overview' || n.type === notificationTab
   );
+
+  const handleClearAll = () => {
+    if (notifications.length === 0) return;
+    const previous = [...notifications];
+    clearNotifications();
+    toast('Notifications cleared', {
+      description: `${previous.length} alerts removed from live telemetry feed.`,
+      duration: 6000,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          restoreNotifications(previous);
+          toast.success('Restored alerts feed');
+        },
+      },
+    });
+  };
 
   return (
     <div className="card-base p-5 bg-white dark:bg-zinc-900 border border-brand-border dark:border-zinc-800 flex flex-col justify-between">
@@ -24,7 +42,19 @@ export const NotificationFeed: React.FC = () => {
               Live Notifications
             </h3>
           </div>
-          <span className="w-2 h-2 rounded-full bg-mint-500 animate-pulse" />
+          <div className="flex items-center gap-2">
+            {notifications.length > 0 && (
+              <button
+                onClick={handleClearAll}
+                className="text-zinc-400 hover:text-coral-500 transition-colors p-1 hit-slop"
+                title="Clear alerts (supports Undo)"
+                aria-label="Clear all notifications"
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
+            <span className="w-2 h-2 rounded-full bg-mint-500 animate-pulse" />
+          </div>
         </div>
 
         {/* Category Tabs (Overview | Nodes | Security) */}
