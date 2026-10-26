@@ -19,7 +19,11 @@
 # Tensorboard runs and training outputs
 /runs/
 /outputs/
-/results/
+
+# Frontend dependencies and builds
+node_modules/
+/dashboard/dist/
+/dashboard/node_modules/
 
 # Python virtual environments
 .venv/
@@ -49,6 +53,8 @@ build/
 # TLS / SSL Certificates, Private Keys, and Credentials (Rule 5)
 /certificates/
 /certs/
+/keys/
+*.tenseal
 *.pem
 *.key
 *.crt

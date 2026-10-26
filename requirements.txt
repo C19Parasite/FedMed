@@ -1,6 +1,4 @@
-# FedMed pinned core dependencies (Week 1)
-# PPML / TenSEAL dependencies are deferred to later weeks per specification
-
+# FedMed pinned core dependencies
 torch==2.14.1
 torchvision==0.29.1
 monai[nibabel,tqdm,einops]==1.6.1
@@ -15,3 +13,8 @@ matplotlib==3.11.2
 nibabel==5.4.2
 tqdm==4.70.1
 einops==0.8.2
+tenseal==0.3.18
+fastapi==0.138.2
+uvicorn==0.49.0
+websockets==17.2
+cryptography==46.0.7
