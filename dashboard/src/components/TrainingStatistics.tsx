@@ -129,12 +129,12 @@ export const TrainingStatistics: React.FC = () => {
                 <stop offset="95%" stopColor="#34D399" stopOpacity={0.0} />
               </linearGradient>
               <linearGradient id="lossGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--theme-primary, #7C5CFA)" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="var(--theme-primary, #7C5CFA)" stopOpacity={0.0} />
+                <stop offset="5%" stopColor="#7C5CFA" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#7C5CFA" stopOpacity={0.0} />
               </linearGradient>
             </defs>
 
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--theme-card-border, #EBE7F5)" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#EBE7F5" vertical={false} />
             <XAxis dataKey="round" stroke="#9CA3AF" tick={{ fontSize: 11 }} />
             <YAxis
               yAxisId="left"
@@ -191,7 +191,7 @@ export const TrainingStatistics: React.FC = () => {
               type="monotone"
               dataKey="loss"
               name="Global Val Loss"
-              stroke="var(--theme-primary, #7C5CFA)"
+              stroke="#7C5CFA"
               strokeWidth={2.5}
               fillOpacity={1}
               fill="url(#lossGradient)"

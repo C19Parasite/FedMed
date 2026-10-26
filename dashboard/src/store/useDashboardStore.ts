@@ -1,34 +1,6 @@
 import { create } from 'zustand';
 import { HospitalNode, NotificationEvent, PrivacyState, RoundMetric, SegmentationCase, WebSocketMessage } from '../types';
 import { INITIAL_CASES, INITIAL_NODES, INITIAL_NOTIFICATIONS, INITIAL_PRIVACY, INITIAL_ROUNDS } from '../lib/mockStream';
-import { ThemeId, LogoId, THEMES } from '../types/theme';
-
-const getInitialTheme = (): ThemeId => {
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('fedmed_theme') as ThemeId;
-    if (saved && THEMES[saved]) return saved;
-  }
-  return 'clinical-violet';
-};
-
-const getInitialLogo = (): LogoId => {
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('fedmed_logo') as LogoId;
-    if (saved) return saved;
-  }
-  return 'neural-brain';
-};
-
-// Apply initial theme on boot
-if (typeof document !== 'undefined') {
-  const initTheme = getInitialTheme();
-  document.documentElement.setAttribute('data-theme', initTheme);
-  if (THEMES[initTheme]?.isDark) {
-    document.documentElement.classList.add('dark');
-  } else {
-    document.documentElement.classList.remove('dark');
-  }
-}
 
 interface DashboardStore {
   // Data
@@ -45,17 +17,10 @@ interface DashboardStore {
   activeModalCase: SegmentationCase | null;
   isModalOpen: boolean;
   is2FAModalOpen: boolean;
-  isSettingsModalOpen: boolean;
   connectionStatus: 'connected' | 'reconnecting' | 'mock' | 'disconnected';
   isMockMode: boolean;
   darkMode: boolean;
   announcement: string;
-
-  // Theme & Brand identity
-  activeThemeId: ThemeId;
-  previewThemeId: ThemeId | null;
-  activeLogoId: LogoId;
-  previewLogoId: LogoId | null;
 
   // Actions
   handleWebSocketMessage: (msg: WebSocketMessage) => void;
@@ -66,8 +31,6 @@ interface DashboardStore {
   closeModal: () => void;
   open2FAModal: () => void;
   close2FAModal: () => void;
-  openSettingsModal: () => void;
-  closeSettingsModal: () => void;
   clearNotifications: () => void;
   restoreNotifications: (items: NotificationEvent[]) => void;
   toggleNodeStatus: (nodeId: string) => void;
@@ -76,275 +39,175 @@ interface DashboardStore {
   toggleDarkMode: () => void;
   startNewRound: () => void;
   setAnnouncement: (text: string) => void;
-
-  // Theme & Logo actions
-  setPreviewTheme: (themeId: ThemeId) => void;
-  applyTheme: (themeId?: ThemeId) => void;
-  cancelThemePreview: () => void;
-  resetThemeToDefault: () => void;
-  setPreviewLogo: (logoId: LogoId) => void;
-  applyLogo: (logoId?: LogoId) => void;
-  cancelLogoPreview: () => void;
 }
 
-export const useDashboardStore = create<DashboardStore>((set, get) => {
-  const initialTheme = getInitialTheme();
-  const initialLogo = getInitialLogo();
+export const useDashboardStore = create<DashboardStore>((set, get) => ({
+  nodes: INITIAL_NODES,
+  rounds: INITIAL_ROUNDS,
+  privacy: INITIAL_PRIVACY,
+  cases: INITIAL_CASES,
+  notifications: INITIAL_NOTIFICATIONS,
 
-  return {
-    nodes: INITIAL_NODES,
-    rounds: INITIAL_ROUNDS,
-    privacy: INITIAL_PRIVACY,
-    cases: INITIAL_CASES,
-    notifications: INITIAL_NOTIFICATIONS,
+  selectedRound: null,
+  viewMode: 'round',
+  notificationTab: 'overview',
+  activeModalCase: null,
+  isModalOpen: false,
+  is2FAModalOpen: false,
+  connectionStatus: 'mock',
+  isMockMode: true,
+  darkMode: false,
+  announcement: '',
 
-    selectedRound: null,
-    viewMode: 'round',
-    notificationTab: 'overview',
-    activeModalCase: null,
-    isModalOpen: false,
-    is2FAModalOpen: false,
-    isSettingsModalOpen: false,
-    connectionStatus: 'mock',
-    isMockMode: true,
-    darkMode: THEMES[initialTheme]?.isDark || false,
-    announcement: '',
-
-    activeThemeId: initialTheme,
-    previewThemeId: null,
-    activeLogoId: initialLogo,
-    previewLogoId: null,
-
-    handleWebSocketMessage: (msg: WebSocketMessage) => {
-      if (msg.type === 'metrics') {
-        const { round, global_loss, dice, baseline_dice } = msg;
-        set((state) => {
-          const existingIdx = state.rounds.findIndex((r) => r.round === round);
-          const newEntry: RoundMetric = {
-            round,
-            global_loss,
-            dice,
-            baseline_dice: baseline_dice ?? 0.845,
-            round_duration_sec: 5.4,
-            participating_clients: state.nodes.filter((n) => n.status !== 'offline').length,
-            total_clients: state.nodes.length,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-            hospital_metrics: {
-              hospital_a: { loss: global_loss + 0.01, dice: dice - 0.01, samples: 520, contribution: 42 },
-              hospital_b: { loss: global_loss - 0.01, dice: dice + 0.01, samples: 380, contribution: 31 },
-              hospital_c: { loss: global_loss, dice: dice, samples: 340, contribution: 27 },
-            },
-            dice_tc: Math.min(0.95, dice - 0.02),
-            dice_wt: Math.min(0.97, dice + 0.03),
-            dice_et: Math.min(0.93, dice - 0.03),
-          };
-
-          const updatedRounds = existingIdx >= 0
-            ? state.rounds.map((r, i) => (i === existingIdx ? newEntry : r))
-            : [...state.rounds, newEntry];
-
-          return {
-            rounds: updatedRounds,
-            announcement: `Round ${round} completed: Dice ${(dice * 100).toFixed(1)}%, Loss ${global_loss.toFixed(3)}.`,
-          };
-        });
-      } else if (msg.type === 'node_status') {
-        const { node, status, samples } = msg;
-        set((state) => ({
-          nodes: state.nodes.map((n) => {
-            if (n.id === node || n.name.toLowerCase().includes(node.toLowerCase())) {
-              const isDropped = status === 'offline';
-              return {
-                ...n,
-                status,
-                isDropped,
-                samples: samples ?? n.samples,
-                lastUpdate: 'Just now',
-              };
-            }
-            return n;
-          }),
-        }));
-      } else if (msg.type === 'privacy') {
-        const { epsilon, delta, noise_sigma } = msg;
-        set((state) => ({
-          privacy: {
-            ...state.privacy,
-            epsilon_spent: epsilon,
-            delta,
-            noise_multiplier: noise_sigma,
-          },
-        }));
-      } else if (msg.type === 'event') {
-        const newNotif: NotificationEvent = {
-          id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+  handleWebSocketMessage: (msg: WebSocketMessage) => {
+    if (msg.type === 'metrics') {
+      const { round, global_loss, dice, baseline_dice } = msg;
+      set((state) => {
+        const existingIdx = state.rounds.findIndex((r) => r.round === round);
+        const newEntry: RoundMetric = {
+          round,
+          global_loss,
+          dice,
+          baseline_dice: baseline_dice ?? 0.845,
+          round_duration_sec: 5.4,
+          participating_clients: state.nodes.filter((n) => n.status !== 'offline').length,
+          total_clients: state.nodes.length,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          type: msg.category || 'overview',
-          level: msg.level,
-          title: msg.title || (msg.level === 'warn' ? 'Federated Warning' : 'System Event'),
-          message: msg.message,
+          hospital_metrics: {
+            hospital_a: { loss: global_loss + 0.01, dice: dice - 0.01, samples: 520, contribution: 42 },
+            hospital_b: { loss: global_loss - 0.01, dice: dice + 0.01, samples: 380, contribution: 31 },
+            hospital_c: { loss: global_loss, dice: dice, samples: 340, contribution: 27 },
+          },
+          dice_tc: Math.min(0.95, dice - 0.02),
+          dice_wt: Math.min(0.97, dice + 0.03),
+          dice_et: Math.min(0.93, dice - 0.03),
         };
 
-        set((state) => ({
-          notifications: [newNotif, ...state.notifications.slice(0, 19)],
-          announcement: `Alert: ${newNotif.title} - ${newNotif.message}`,
-        }));
-      }
-    },
+        const updatedRounds = existingIdx >= 0
+          ? state.rounds.map((r, i) => (i === existingIdx ? newEntry : r))
+          : [...state.rounds, newEntry];
 
-    setSelectedRound: (round) => set({ selectedRound: round }),
-    setViewMode: (mode) => set({ viewMode: mode }),
-    setNotificationTab: (tab) => set({ notificationTab: tab }),
-    openModal: (caseItem) => set({ activeModalCase: caseItem, isModalOpen: true }),
-    closeModal: () => set({ activeModalCase: null, isModalOpen: false }),
-    open2FAModal: () => set({ is2FAModalOpen: true }),
-    close2FAModal: () => set({ is2FAModalOpen: false }),
-    openSettingsModal: () => set({ isSettingsModalOpen: true }),
-    closeSettingsModal: () => {
-      // Revert any uncommitted theme or logo preview
-      get().cancelThemePreview();
-      get().cancelLogoPreview();
-      set({ isSettingsModalOpen: false });
-    },
-
-    clearNotifications: () => set({ notifications: [] }),
-    restoreNotifications: (items) => set({ notifications: items }),
-
-    toggleNodeStatus: (nodeId) => {
+        return {
+          rounds: updatedRounds,
+          announcement: `Round ${round} completed: Dice ${(dice * 100).toFixed(1)}%, Loss ${global_loss.toFixed(3)}.`,
+        };
+      });
+    } else if (msg.type === 'node_status') {
+      const { node, status, samples } = msg;
       set((state) => ({
         nodes: state.nodes.map((n) => {
-          if (n.id === nodeId) {
-            const nextStatus = n.status === 'offline' ? 'online' : 'offline';
+          if (n.id === node || n.name.toLowerCase().includes(node.toLowerCase())) {
+            const isDropped = status === 'offline';
             return {
               ...n,
-              status: nextStatus,
-              isDropped: nextStatus === 'offline',
+              status,
+              isDropped,
+              samples: samples ?? n.samples,
               lastUpdate: 'Just now',
             };
           }
           return n;
         }),
       }));
-    },
-
-    setAnnouncement: (text) => set({ announcement: text }),
-
-    toggleMockMode: () => {
+    } else if (msg.type === 'privacy') {
+      const { epsilon, delta, noise_sigma } = msg;
       set((state) => ({
-        isMockMode: !state.isMockMode,
-        connectionStatus: !state.isMockMode ? 'mock' : 'disconnected',
+        privacy: {
+          ...state.privacy,
+          epsilon_spent: epsilon,
+          delta,
+          noise_multiplier: noise_sigma,
+        },
       }));
-    },
+    } else if (msg.type === 'event') {
+      const newNotif: NotificationEvent = {
+        id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        type: msg.category || 'overview',
+        level: msg.level,
+        title: msg.title || (msg.level === 'warn' ? 'Federated Warning' : 'System Event'),
+        message: msg.message,
+      };
 
-    setConnectionStatus: (status) => set({ connectionStatus: status }),
+      set((state) => ({
+        notifications: [newNotif, ...state.notifications.slice(0, 19)],
+        announcement: `Alert: ${newNotif.title} - ${newNotif.message}`,
+      }));
+    }
+  },
 
-    toggleDarkMode: () => {
-      set((state) => {
-        const nextDark = !state.darkMode;
-        if (nextDark) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
+  setSelectedRound: (round) => set({ selectedRound: round }),
+  setViewMode: (mode) => set({ viewMode: mode }),
+  setNotificationTab: (tab) => set({ notificationTab: tab }),
+  openModal: (caseItem) => set({ activeModalCase: caseItem, isModalOpen: true }),
+  closeModal: () => set({ activeModalCase: null, isModalOpen: false }),
+  open2FAModal: () => set({ is2FAModalOpen: true }),
+  close2FAModal: () => set({ is2FAModalOpen: false }),
+
+  clearNotifications: () => set({ notifications: [] }),
+  restoreNotifications: (items) => set({ notifications: items }),
+
+  toggleNodeStatus: (nodeId) => {
+    set((state) => ({
+      nodes: state.nodes.map((n) => {
+        if (n.id === nodeId) {
+          const nextStatus = n.status === 'offline' ? 'online' : 'offline';
+          return {
+            ...n,
+            status: nextStatus,
+            isDropped: nextStatus === 'offline',
+            lastUpdate: 'Just now',
+          };
         }
-        return { darkMode: nextDark };
-      });
-    },
+        return n;
+      }),
+    }));
+  },
 
-    startNewRound: () => {
-      const { rounds, nodes } = get();
-      const nextRoundNum = rounds.length + 1;
-      const lastRound = rounds[rounds.length - 1];
-      const newLoss = Math.max(0.18, lastRound.global_loss - 0.015);
-      const newDice = Math.min(0.93, lastRound.dice + 0.005);
+  setAnnouncement: (text) => set({ announcement: text }),
 
-      get().handleWebSocketMessage({
-        type: 'metrics',
-        round: nextRoundNum,
-        global_loss: parseFloat(newLoss.toFixed(4)),
-        dice: parseFloat(newDice.toFixed(4)),
-        baseline_dice: 0.845,
-      });
+  toggleMockMode: () => {
+    set((state) => ({
+      isMockMode: !state.isMockMode,
+      connectionStatus: !state.isMockMode ? 'mock' : 'disconnected',
+    }));
+  },
 
-      get().handleWebSocketMessage({
-        type: 'event',
-        level: 'success',
-        title: `Round ${nextRoundNum} Initiated`,
-        message: `Triggered synchronous FedAvg across ${nodes.length} silos on encrypted updates.`,
-        category: 'overview',
-      });
-    },
+  setConnectionStatus: (status) => set({ connectionStatus: status }),
 
-    // Theme preview & apply operations
-    setPreviewTheme: (themeId: ThemeId) => {
-      set({ previewThemeId: themeId });
-      document.documentElement.setAttribute('data-theme', themeId);
-      if (THEMES[themeId]?.isDark) {
+  toggleDarkMode: () => {
+    set((state) => {
+      const nextDark = !state.darkMode;
+      if (nextDark) {
         document.documentElement.classList.add('dark');
       } else {
         document.documentElement.classList.remove('dark');
       }
-    },
+      return { darkMode: nextDark };
+    });
+  },
 
-    applyTheme: (themeId?: ThemeId) => {
-      const targetTheme = themeId || get().previewThemeId || get().activeThemeId;
-      localStorage.setItem('fedmed_theme', targetTheme);
-      document.documentElement.setAttribute('data-theme', targetTheme);
-      const isDark = THEMES[targetTheme]?.isDark || false;
-      if (isDark) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-      set({
-        activeThemeId: targetTheme,
-        previewThemeId: null,
-        darkMode: isDark,
-      });
-    },
+  startNewRound: () => {
+    const { rounds, nodes } = get();
+    const nextRoundNum = rounds.length + 1;
+    const lastRound = rounds[rounds.length - 1];
+    const newLoss = Math.max(0.18, lastRound.global_loss - 0.015);
+    const newDice = Math.min(0.93, lastRound.dice + 0.005);
 
-    cancelThemePreview: () => {
-      const currentActive = get().activeThemeId;
-      document.documentElement.setAttribute('data-theme', currentActive);
-      const isDark = THEMES[currentActive]?.isDark || false;
-      if (isDark) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-      set({
-        previewThemeId: null,
-        darkMode: isDark,
-      });
-    },
+    get().handleWebSocketMessage({
+      type: 'metrics',
+      round: nextRoundNum,
+      global_loss: parseFloat(newLoss.toFixed(4)),
+      dice: parseFloat(newDice.toFixed(4)),
+      baseline_dice: 0.845,
+    });
 
-    resetThemeToDefault: () => {
-      const defaultTheme = 'clinical-violet';
-      localStorage.setItem('fedmed_theme', defaultTheme);
-      document.documentElement.setAttribute('data-theme', defaultTheme);
-      document.documentElement.classList.remove('dark');
-      set({
-        activeThemeId: defaultTheme,
-        previewThemeId: null,
-        darkMode: false,
-      });
-    },
-
-    // Logo preview & apply operations
-    setPreviewLogo: (logoId: LogoId) => {
-      set({ previewLogoId: logoId });
-    },
-
-    applyLogo: (logoId?: LogoId) => {
-      const targetLogo = logoId || get().previewLogoId || get().activeLogoId;
-      localStorage.setItem('fedmed_logo', targetLogo);
-      set({
-        activeLogoId: targetLogo,
-        previewLogoId: null,
-      });
-    },
-
-    cancelLogoPreview: () => {
-      set({ previewLogoId: null });
-    },
-  };
-});
+    get().handleWebSocketMessage({
+      type: 'event',
+      level: 'success',
+      title: `Round ${nextRoundNum} Initiated`,
+      message: `Triggered synchronous FedAvg across ${nodes.length} silos on encrypted updates.`,
+      category: 'overview',
+    });
+  },
+}));

@@ -96,7 +96,7 @@ export const MetricTiles: React.FC = () => {
               <svg viewBox="0 0 100 40" className="w-full h-full overflow-visible">
                 <polyline
                   fill="none"
-                  stroke="var(--theme-primary, #7C5CFA)"
+                  stroke="#7C5CFA"
                   strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"

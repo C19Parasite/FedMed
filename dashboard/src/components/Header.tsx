@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wifi, WifiOff, RefreshCw, Shield, Sparkles, Plus, Server, Search, Loader2, Settings } from 'lucide-react';
+import { Wifi, WifiOff, RefreshCw, Shield, Sparkles, Plus, Server, Search, Loader2 } from 'lucide-react';
 import { useDashboardStore } from '../store/useDashboardStore';
 import { useIsFetching } from '@tanstack/react-query';
 import { isMac } from './CommandMenu';
@@ -10,7 +10,6 @@ export const Header: React.FC = () => {
     isMockMode,
     toggleMockMode,
     open2FAModal,
-    openSettingsModal,
     rounds,
     nodes,
   } = useDashboardStore();
@@ -116,17 +115,6 @@ export const Header: React.FC = () => {
           <Server size={13} className="text-lavender-600" />
           <span>Quorum: <strong>{activeNodesCount}/{nodes.length}</strong> Silos</span>
         </div>
-
-        {/* Appearance & Theme Settings Button */}
-        <button
-          onClick={openSettingsModal}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white dark:bg-zinc-800 border border-brand-border dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 shadow-sm hover:border-lavender-400 hover:text-lavender-600 dark:hover:text-lavender-300 transition-all hit-slop cursor-pointer"
-          title="Theme & Brand Appearance Settings"
-          aria-label="Theme & Brand Appearance Settings"
-        >
-          <Settings size={13} className="text-lavender-600" />
-          <span className="hidden sm:inline">Theme</span>
-        </button>
 
         {/* Start New Round Action Button */}
         <button
