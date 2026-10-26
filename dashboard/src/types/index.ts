@@ -66,6 +66,7 @@ export interface SegmentationCase {
   modality: string;
   previewUrl?: string;
   blurHash?: string;
+  sliceDice?: Record<number, number>;
 }
 
 export interface NotificationEvent {

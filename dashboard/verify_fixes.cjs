@@ -213,6 +213,63 @@ async function verifyAll() {
 
   await page.screenshot({ path: path.join(screenshotDir, 'gallery_real_mri.png') });
 
+  // TEST 7: Modal Dismissal and Back Navigation (Escape, Close Button, Backdrop, Browser Back)
+  console.log('\n--- TEST 7: Modal Dismissal (X button, Escape, Backdrop, Browser Back) ---');
+  await page.goto('http://localhost:3000/overview?case=case_0132', { waitUntil: 'networkidle0' });
+  await new Promise((r) => setTimeout(r, 1000));
+
+  // Check Dice score badges and labeling
+  const modalText = await page.$eval('div[role="dialog"]', (el) => el.innerText);
+  const has3DVolumetricLabel = modalText.includes('3D Volumetric Dice: 87.2%') || modalText.includes('3D Vol: 87.2%');
+  const has2DSliceLabel = modalText.includes('Slice 16 2D:');
+  const hasSubregionBreakdown = modalText.includes('WT: 92.1%') && modalText.includes('TC: 89.3%') && modalText.includes('ET: 80.2%');
+  console.log(`[CHECK] Clear 3D Volumetric Dice label present: ${has3DVolumetricLabel}`);
+  console.log(`[CHECK] 2D Slice Dice label present: ${has2DSliceLabel}`);
+  console.log(`[CHECK] Subregion 3D Dice breakdown (WT, TC, ET) present: ${hasSubregionBreakdown}`);
+
+  // 7a: Close via Close Button (X)
+  const closeBtn = await page.$('button[aria-label="Close Modal"]');
+  if (closeBtn) {
+    await closeBtn.click();
+    await new Promise((r) => setTimeout(r, 600));
+    const isModalOpenAfterX = await page.$eval('div[role="dialog"]', () => true).catch(() => false);
+    const urlAfterX = page.url();
+    console.log(`[CHECK] Modal closed after clicking X: ${!isModalOpenAfterX}`);
+    console.log(`[CHECK] URL param removed after clicking X: ${!urlAfterX.includes('case=')}`);
+  }
+
+  // 7b: Open via click & close via Escape key
+  console.log('Testing Escape key dismissal...');
+  await page.goto('http://localhost:3000/overview?case=case_0132', { waitUntil: 'networkidle0' });
+  await new Promise((r) => setTimeout(r, 800));
+  await page.keyboard.press('Escape');
+  await new Promise((r) => setTimeout(r, 600));
+  const isModalOpenAfterEsc = await page.$eval('div[role="dialog"]', () => true).catch(() => false);
+  console.log(`[CHECK] Modal closed after pressing Escape: ${!isModalOpenAfterEsc}`);
+
+  // 7c: Open & close via backdrop click
+  console.log('Testing backdrop click dismissal...');
+  await page.goto('http://localhost:3000/overview?case=case_0132', { waitUntil: 'networkidle0' });
+  await new Promise((r) => setTimeout(r, 800));
+  // Click on top-left of backdrop (10, 10)
+  await page.mouse.click(10, 10);
+  await new Promise((r) => setTimeout(r, 600));
+  const isModalOpenAfterBackdrop = await page.$eval('div[role="dialog"]', () => true).catch(() => false);
+  console.log(`[CHECK] Modal closed after clicking backdrop: ${!isModalOpenAfterBackdrop}`);
+
+  // 7d: Open & close via browser back button
+  console.log('Testing Browser Back navigation...');
+  await page.goto('http://localhost:3000/overview', { waitUntil: 'networkidle0' });
+  await new Promise((r) => setTimeout(r, 500));
+  await page.goto('http://localhost:3000/overview?case=case_0132', { waitUntil: 'networkidle0' });
+  await new Promise((r) => setTimeout(r, 800));
+  const isModalOpenBeforeBack = await page.$eval('div[role="dialog"]', () => true).catch(() => false);
+  console.log(`Modal open before back button: ${isModalOpenBeforeBack}`);
+  await page.goBack({ waitUntil: 'networkidle0' });
+  await new Promise((r) => setTimeout(r, 600));
+  const isModalOpenAfterBack = await page.$eval('div[role="dialog"]', () => true).catch(() => false);
+  console.log(`[CHECK] Modal closed after Browser Back: ${!isModalOpenAfterBack}`);
+
   console.log('\nConsole Errors during tests:', consoleErrors.length);
   if (consoleErrors.length > 0) {
     console.log(consoleErrors);

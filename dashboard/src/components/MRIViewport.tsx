@@ -91,7 +91,7 @@ export const MRIViewport: React.FC<MRIViewportProps> = ({
             }
           }}
           className="w-full h-full object-contain filter contrast-125 brightness-95"
-          style={{ imageRendering: 'pixelated' }}
+          style={{ imageRendering: 'auto' }}
         />
 
         {/* 2. Segmentation Mask Overlays (Only these layers respond to the maskOpacity slider) */}

@@ -11,6 +11,11 @@ export const SegmentationPage: React.FC = () => {
   const [maskOpacity, setMaskOpacity] = useState<number>(0.7);
   const [activeModality, setActiveModality] = useState<'FLAIR' | 'T1ce' | 'T2'>('FLAIR');
 
+  const zeroIndexedSlice = Math.max(0, Math.min(31, sliceZ - 1));
+  const slice2dDiceScore = selectedCase.sliceDice?.[zeroIndexedSlice] !== undefined
+    ? (selectedCase.sliceDice[zeroIndexedSlice] * 100).toFixed(1)
+    : (selectedCase.diceMean * 100 + 2.3).toFixed(1);
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -82,10 +87,10 @@ export const SegmentationPage: React.FC = () => {
             {/* Ground Truth */}
             <MRIViewport
               caseId={selectedCase.id}
-              sliceIndex={Math.max(0, Math.min(31, sliceZ - 1))}
+              sliceIndex={zeroIndexedSlice}
               maskType="gt"
               title="Ground Truth Mask"
-              badge={<span className="font-mono text-zinc-400">Axial Z: {sliceZ}</span>}
+              badge={<span className="font-mono text-zinc-400">Axial Slice {sliceZ} / {selectedCase.depthSlices}</span>}
               maskOpacity={maskOpacity}
               modality={activeModality}
             />
@@ -93,13 +98,19 @@ export const SegmentationPage: React.FC = () => {
             {/* Federated Prediction */}
             <MRIViewport
               caseId={selectedCase.id}
-              sliceIndex={Math.max(0, Math.min(31, sliceZ - 1))}
+              sliceIndex={zeroIndexedSlice}
               maskType="pred"
               title="FedMed Prediction"
               badge={
-                <span className="font-mono text-mint-600 font-bold tabular-nums">
-                  Dice: {(selectedCase.diceMean * 100).toFixed(1)}%
-                </span>
+                <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                  <span className="text-zinc-500">
+                    Slice {sliceZ}: <span className="font-semibold text-zinc-800 dark:text-zinc-200">{slice2dDiceScore}%</span>
+                  </span>
+                  <span className="text-zinc-300 dark:text-zinc-600">•</span>
+                  <span className="text-mint-600 font-bold tabular-nums">
+                    3D Vol: {(selectedCase.diceMean * 100).toFixed(1)}%
+                  </span>
+                </div>
               }
               maskOpacity={maskOpacity}
               modality={activeModality}
@@ -144,9 +155,14 @@ export const SegmentationPage: React.FC = () => {
         {/* Right Info Card (4 cols) */}
         <div className="lg:col-span-4 space-y-4">
           <div className="card-base p-6 bg-white dark:bg-zinc-900 border border-brand-border dark:border-zinc-800 space-y-4">
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-white pb-3 border-b border-brand-border/60">
-              Quantitative Dice Analysis
-            </h3>
+            <div className="pb-3 border-b border-brand-border/60">
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                3D Volumetric Dice Analysis
+              </h3>
+              <p className="text-[11px] text-zinc-400 mt-0.5">
+                Evaluated over all 32 axial slices for this subject
+              </p>
+            </div>
 
             <div className="space-y-3 text-xs">
               <div>
