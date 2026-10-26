@@ -1,6 +1,109 @@
-# FedMed
+# FedMed: Cross-Silo Federated Learning Engine
 
-**FedMed** is a cross-silo federated learning system for 3D brain tumor segmentation on multi-parametric MRI scans (T1, T1ce, T2, FLAIR) built using **PyTorch**, **MONAI**, and **Flower (`flwr`)**.
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.14-EE4C2C.svg?style=flat&logo=pytorch)](https://pytorch.org/)
+[![MONAI](https://img.shields.io/badge/MONAI-1.6.1-2088FF.svg?style=flat)](https://monai.io/)
+[![Flower](https://img.shields.io/badge/Flower-1.39-FF6F00.svg?style=flat)](https://flower.ai/)
+[![TenSEAL](https://img.shields.io/badge/TenSEAL-CKKS_0.3.18-8A2BE2.svg?style=flat)](https://github.com/OpenMined/TenSEAL)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.138-009688.svg?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18.3-61DAFB.svg?style=flat&logo=react)](https://react.dev/)
+[![Tests](https://img.shields.io/badge/Tests-117%20Passed-brightgreen.svg?style=flat)](#test-suite)
+
+**FedMed** is an end-to-end, privacy-preserving cross-silo federated learning system for 3D brain tumor segmentation on multi-parametric MRI scans (T1, T1ce, T2, FLAIR). Built for distributed healthcare consortia where data sharing is prohibited by **HIPAA** and **GDPR**, FedMed combines **Flower (`flwr`)**, **MONAI 3D U-Net**, **TenSEAL CKKS Homomorphic Encryption**, **Client-Level Differential Privacy**, and a real-time **WebSocket + React Dashboard**.
+
+---
+
+## Architecture Overview
+
+```mermaid
+flowchart TD
+    subgraph CentralServer["Flower Aggregation Server & API"]
+        S1["Global Model Parameters (w_t)"]
+        S2["CKKS Ciphertext Homomorphic Sum"]
+        S3["Dynamic Quorum & Renormalization"]
+        S4["Global Holdout Evaluation"]
+        S5["FastAPI WebSocket & REST Server"]
+    end
+
+    subgraph Hospital1["Hospital Silo 1 (General Hospital)"]
+        H1_D["Private MRI Scans"] --> H1_M["Local MONAI 3D U-Net"]
+        H1_M --> H1_P["ProtectionPipeline: Clip -> DP Noise -> CKKS Encrypt"]
+    end
+
+    subgraph Hospital2["Hospital Silo 2 (University Health)"]
+        H2_D["Private MRI Scans"] --> H2_M["Local MONAI 3D U-Net"]
+        H2_M --> H2_P["ProtectionPipeline: Clip -> DP Noise -> CKKS Encrypt"]
+    end
+
+    subgraph Hospital3["Hospital Silo 3 (Memorial Cancer Inst.)"]
+        H3_D["Private MRI Scans"] --> H3_M["Local MONAI 3D U-Net"]
+        H3_M --> H3_P["ProtectionPipeline: Clip -> DP Noise -> CKKS Encrypt"]
+    end
+
+    H1_P -- "mTLS gRPC: Encrypted Δw · n_1" --> S2
+    H2_P -- "mTLS gRPC: Encrypted Δw · n_2" --> S2
+    H3_P -- "mTLS gRPC: Encrypted Δw · n_3" --> S2
+
+    S2 -- "Broadcast Ciphertext Sum & Total N" --> H1_M
+    S2 -- "Broadcast Ciphertext Sum & Total N" --> H2_M
+    S2 -- "Broadcast Ciphertext Sum & Total N" --> H3_M
+
+    S5 -- "WebSocket Stream (/ws/metrics)" --> UI["React + Recharts Dashboard"]
+```
+
+---
+
+## Privacy Stack & Wire Transmission Audit
+
+### ProtectionPipeline Execution Order
+In each communication round, parameter updates travel through a strict defense-in-depth pipeline:
+
+1. **Outgoing (Hospital $\to$ Server):**
+   $$\text{Local Training} \to \text{Compute } \Delta w \to \text{L2 Clip } (\le C) \to \text{Gaussian Noise } (\sigma) \to \text{Scale by } n_i \to \text{CKKS Encrypt} \to \text{mTLS gRPC Send}$$
+2. **Server Aggregation (Ciphertext Only):**
+   $$C_{\text{sum}} = \sum_{i \in \text{active}} \text{Enc}(n_i \cdot \Delta w_i), \quad N_{\text{total}} = \sum_{i \in \text{active}} n_i$$
+3. **Incoming (Server $\to$ Hospital):**
+   $$\text{Receive } C_{\text{sum}} \to \text{CKKS Decrypt} \to \text{Divide by } N_{\text{total}} \to \text{Apply to Global Model}$$
+
+### What Crosses the Wire vs What Never Does
+
+| Data Entity | Crosses the Network? | Protection Mechanism |
+|---|---|---|
+| **Raw 3D MRI Volumes** | **NEVER (0 Bytes)** | Remains exclusively inside institutional silo |
+| **Segmentation Masks** | **NEVER (0 Bytes)** | Annotations strictly private to hospital |
+| **Patient IDs / Records** | **NEVER (0 Bytes)** | Kept on hospital local disks |
+| **Individual Gradients** | **NO** | Replaced by clipped, noise-injected delta $\Delta w$ |
+| **Plaintext Parameter Deltas** | **NO (when HE enabled)** | Sealed inside TenSEAL CKKS ciphertext |
+| **Aggregated Model Weights** | **YES** | Homomorphic ciphertext sum; decrypted on clients |
+| **Round Metrics** | **YES** | Aggregated scalars (loss, global Dice, $\epsilon$) |
+
+---
+
+## Homomorphic Encryption (HE) vs Secure Multi-Party Computation (SMPC)
+
+A frequent question in privacy-preserving machine learning reviews is why TenSEAL CKKS Homomorphic Encryption was chosen over Secure Multi-Party Computation (SMPC) secret sharing:
+
+1. **Homomorphic Encryption (TenSEAL CKKS):** Operates via lattice-based cryptography (Ring Learning with Errors, Ring-LWE). Clients encrypt their updates locally and transmit them to the central server. The server sums the ciphertexts non-interactively without requiring round-trips or pairwise client coordination. This makes HE resilient to asynchronous dropouts and allows an untrusted aggregator to do the heavy lifting while remaining cryptographically blinded. The trade-off is ciphertext expansion (~6.7x bandwidth overhead) and compute time for encryption.
+
+2. **Secure Multi-Party Computation (SMPC):** Splits secret values into pseudo-random additive or Shamir shares distributed among parties who communicate interactively to evaluate functions. While local arithmetic is fast and memory overhead is near zero, SMPC requires a synchronous, all-to-all communication mesh between clients. If any hospital disconnects mid-protocol, the computation aborts unless expensive threshold reconstruction schemes are deployed. For cross-silo healthcare with potential WAN instability and client dropouts, CKKS homomorphic aggregation provides a significantly simpler, more resilient aggregation topology.
+
+---
+
+## Empirical Ablation Benchmarks
+
+Real measured metrics generated from `scripts/run_ablation.py` across privacy and security configurations on identical held-out test patients:
+
+| Configuration | Final Global Dice | $\Delta$ vs Baseline | DP Epsilon ($\epsilon$) | Time / Round | Network Payload / Round | Security Stack |
+|---|---|---|---|---|---|---|
+| **Centralized Baseline** | 0.0206 | baseline | $\infty$ (No DP) | 1.71s | 0 KB | N/A (Centralized) |
+| **FedAvg Plaintext** | 0.0226 | +0.20% | $\infty$ (No DP) | 5.75s | 96 KB | None (Plaintext) |
+| **FedAvg + TLS** | 0.0226 | +0.20% | $\infty$ (No DP) | 5.78s | 96 KB | mTLS gRPC in Transit |
+| **FedAvg + DP ($\sigma=0.5$)** | 0.0247 | +0.41% | 17.57 | 5.66s | 96 KB | Client-Level DP ($\delta=10^{-5}$) |
+| **FedAvg + DP ($\sigma=1.0$)** | 0.0200 | -0.06% | 7.79 | 5.74s | 96 KB | Client-Level DP ($\delta=10^{-5}$) |
+| **FedAvg + DP ($\sigma=2.0$)** | 0.0206 | 0.00% | 3.64 | 5.87s | 96 KB | Client-Level DP ($\delta=10^{-5}$) |
+| **FedAvg + TenSEAL HE** | 0.0224 | +0.18% | $\infty$ (No DP) | 5.96s | 647 KB | CKKS Homomorphic Encryption |
+| **FedMed Full (+TLS+DP+HE)** | **0.0224** | **+0.18%** | **7.79** | **5.90s** | **647 KB** | **mTLS + DP ($\sigma=1.0$) + CKKS HE** |
+
+*All runs evaluated on CPU under `debug: true` with fixed random seed (42).*
 
 ---
 
@@ -8,192 +111,166 @@
 
 ```text
 FedMed/
-├── configs/
-│   ├── base.yaml                  # Full default configuration for 3D segmentation
-│   ├── baseline.yaml              # Centralized baseline configuration
-│   ├── smoke_test.yaml            # Tiny/fast CI & smoke test configuration
-│   └── federated_hospitals.yaml   # 3 Mock Hospital Nodes configuration
-├── data/                          # Local/cached/synthetic data directories (gitignored)
-├── fedmed/
-│   ├── data/                      # Datasets, transforms, loaders, splits, synthetic cohorts
-│   ├── models/                    # Model factory, custom 3D U-Net, norm policies, params utilities
-│   │   ├── factory.py             # build_model factory (monai_unet, segresnet, dynunet, custom)
-│   │   ├── unet3d.py              # UNet3DCustom (reference) & UNet3D wrapper
-│   │   ├── norm.py                # assert_no_batchnorm, ROI divisibility, GroupNorm validation
-│   │   └── params.py              # count/get/set_parameters, vector round-trip, model_size_mb
-│   ├── training/                  # Losses, metrics, trainer loop
-│   │   ├── losses.py              # build_loss, DeepSupervisionLoss wrapper, Dice/CE/Focal
-│   │   ├── metrics.py             # SegmentationMetrics accumulator, dice/hd95_per_channel
-│   │   └── trainer.py             # Centralized baseline trainer
-│   ├── fl/                        # Flower client, server, aggregation strategy
-│   └── utils/                     # Reproducible seeding, privacy logger, config validation
+├── config.yaml                      # Unified configuration governing all modules
+├── requirements.txt                 # Pinned dependencies
+├── README.md                        # Architectural and operational documentation
+├── AUDIT.md                         # Phase-by-phase implementation audit
+├── certs/                           # TLS root CA, server certificates and keys (gitignored)
+├── keys/                            # TenSEAL CKKS encryption contexts (gitignored)
+├── data/                            # BraTS MRI volumes & splits (gitignored)
+├── partitions/                      # Patient-level partition manifest
+│   └── partition_manifest.json
+├── src/
+│   ├── api/ws_server.py             # FastAPI: WebSocket streaming & REST segmentation endpoints
+│   ├── data/
+│   │   ├── dataset.py               # MONAI transforms, synthetic generator, dataset builders
+│   │   └── partition.py             # Patient-level IID/Non-IID partitioning
+│   ├── fl/
+│   │   ├── client.py                # Flower NumPyClient with ProtectionPipeline
+│   │   ├── server.py                # Central Flower server orchestrator
+│   │   └── strategy.py              # Resilient FedAvg strategy with global evaluation
+│   ├── metrics/publisher.py         # Unified metrics recorder (CSV, JSON, WebSocket dispatch)
+│   ├── model/
+│   │   ├── metrics.py               # Multi-label BraTS Dice (WT, TC, ET) accumulator
+│   │   └── unet.py                  # MONAI 3D U-Net factory with InstanceNorm
+│   ├── privacy/
+│   │   ├── dp.py                    # L2 clipping, Gaussian mechanism, Rényi DP accountant
+│   │   ├── he.py                    # TenSEAL CKKS serialization, chunking, homomorphic sum
+│   │   └── hooks.py                 # Outgoing and incoming ProtectionPipeline hooks
+│   └── security/tls.py              # gRPC mTLS credentials loaders
 ├── scripts/
-│   ├── profile_model.py           # Model runtime, parameter count, and GPU headroom profiler
-│   ├── download_data.py           # Decathlon / BraTS data download and verification
-│   ├── smoke_test_data.py         # Batch tensor loading and range inspection
-│   ├── visualize_sample.py        # 5-panel slice montage generator (modality + tumor overlay)
-│   ├── train_baseline.py          # Centralized baseline training CLI
-│   ├── evaluate.py                # Checkpoint evaluation CLI
-│   └── run_federated_nodes.py     # Multi-node Flower hospital runner and orchestrator
-├── tests/                         # Comprehensive pytest test suite (CPU-only, fast)
-├── requirements.txt               # Pinned core dependencies
-├── pyproject.toml                 # Package definition for editable installation
-└── README.md
+│   ├── run_demo.bat / .sh           # One-command demo: API + Server + 3 Hospitals + Dashboard
+│   ├── run_server.py                # Central FL server launcher
+│   ├── run_hospital.py              # Individual hospital silo launcher (--id hospital_N)
+│   ├── run_all.bat / .sh            # Multi-process local federation launcher
+│   ├── generate_certs.py            # Local CA & server certificate generator
+│   ├── generate_he_keys.py          # TenSEAL secret & public context generator
+│   ├── generate_demo_cases.py       # Public BraTS demo slice overlay exporter
+│   ├── run_ablation.py              # End-to-end privacy/security ablation suite
+│   ├── attack_demo.py               # Gradient inversion sanity check with/without DP
+│   ├── simulate_dropout.py          # Mid-round node failure and quorum verification
+│   └── verify_federation.py         # End-to-end federation verification & audit generator
+├── tests/                           # 117 automated unit and integration tests
+├── dashboard/                       # React 18 + Vite + Recharts monitoring frontend
+│   ├── src/components/              # Modular UI components (Curves, Privacy, Viewer, Timeline)
+│   └── src/api.js                   # Typed REST & WebSocket client with auto-reconnect
+└── results/                         # Real experiment outputs, plots, audit reports
 ```
 
 ---
 
-## Models, Normalization & Architecture Reference
+## Quick Start & Verification
 
-### Supported Architectures (`build_model(cfg)`)
-
-The model factory supports four 3D architectures configured under `model.name`:
-
-1. **`monai_unet`** (`monai.networks.nets.UNet`):
-   - Standard 3D residual U-Net with configurable channel progression, strides, and normalization.
-2. **`segresnet`** (`monai.networks.nets.SegResNet`):
-   - Encoder-decoder ResNet backbone with GroupNorm (8 groups) designed for memory-efficient volumetric segmentation.
-3. **`dynunet`** (`monai.networks.nets.DynUNet`):
-   - Dynamic U-Net with deep supervision support.
-   - **Deep Supervision Output Contract**: In training mode (`.train()`), forward pass returns a 6D stacked tensor `[B, N, C, D, H, W]` where `N = deep_supr_num + 1`. In evaluation mode (`.eval()`), returns a standard 5D tensor `[B, C, D, H, W]`.
-4. **`unet3d_custom`** (`fedmed.models.unet3d.UNet3DCustom`):
-   - A transparent, readable from-scratch 3D U-Net implementation in `fedmed/models/unet3d.py`.
-   - Features modular encoder stages, bottleneck, decoder stages with skip connections via concatenation, optional residual connections, and strict federated normalization enforcement.
-
-### Normalization Policy (Why BatchNorm is Banned)
-
-**Batch Normalization (`BatchNorm1d/2d/3d`) is strictly prohibited in FedMed.**
-Only `GroupNorm` and `InstanceNorm` are permitted.
-
-- **Non-IID Drift**: Under non-IID client distributions across hospital silos, local running mean and variance diverge drastically.
-- **FedAvg Averaging Failure**: FedAvg averages model weights; batch norm running statistics are not weights, making empirical averaging mathematically ungrounded.
-- **Differential Privacy Incompatibility**: Per-sample gradient clipping (required for DP in later sprints) is incompatible with batch statistics that share information across samples.
-- **Enforcement**:
-  - `build_model(cfg)` and `validate_config(cfg)` reject any config with `norm.type="batch"`.
-  - The `assert_no_batchnorm(model)` runtime guard scans all submodules and raises `ValueError` if any BatchNorm layer exists.
-  - GroupNorm requires that `num_groups` divides every channel width in the model.
-  - `validate_roi_for_model(cfg)` checks that each ROI dimension is divisible by the total downsampling factor (product of strides).
-
----
-
-## Loss Functions & Deep Supervision
-
-Selected via `loss.name` in configuration:
-- **`dice_ce`**: `monai.losses.DiceCELoss` (Dice + Cross-Entropy)
-- **`dice_focal`**: `monai.losses.DiceFocalLoss` (Dice + Focal Loss)
-- **`dice`**: `monai.losses.DiceLoss`
-
-### Multi-Label Configuration Rationale
-BraTS defines 3 overlapping binary tumor channels: **TC (Tumor Core)**, **WT (Whole Tumor)**, and **ET (Enhancing Tumor)**.
-- `sigmoid=True`: Independent sigmoid activation per channel (each voxel can belong to multiple subregions).
-- `softmax=False`: Softmax forces mutually exclusive probabilities across channels, breaking overlapping subregions.
-- `to_onehot_y=False`: Ground truth is already a 3-channel binary tensor `[B, 3, D, H, W]`.
-- `include_background=True`: All 3 channels represent active tumor compartments (no background class channel).
-
-### DeepSupervisionLoss Wrapper
-When deep supervision is active (e.g. `dynunet` in training mode), `DeepSupervisionLoss` applies halving weights $(1, 1/2, 1/4, \dots)$ normalized to sum to $1.0$ across the stages. If intermediate stages have differing spatial resolutions, trilinear interpolation aligns them to the target. It acts as a transparent no-op when deep supervision is disabled.
-
----
-
-## Metrics & Empty Ground Truth Policies
-
-### Evaluation Metrics (`SegmentationMetrics`)
-Stateful accumulator accumulating per-volume statistics:
-- **Dice**: `dice_tc`, `dice_wt`, `dice_et`, and `dice_mean`.
-- **HD95** (95th-percentile Hausdorff Distance): `hd95_tc`, `hd95_wt`, `hd95_et`, and `hd95_mean`.
-- Thread-safe and CPU-safe: tensors are moved to CPU before surface distance calculations.
-- Spacing support: voxel spacing in mm (default `[1.0, 1.0, 1.0]`).
-- Cap handling: `inf` and `nan` distances are replaced by `max_hd95` (default `373.13` mm, the diagonal of a standard 240x240x155 BraTS volume: $\sqrt{240^2 + 240^2 + 155^2} \approx 373.13$).
-
-### Empty Ground Truth Policy (`metrics.empty_policy`)
-1. **`brats`** (Default):
-   - Ground truth empty and prediction empty: Dice = $1.0$, HD95 = $0.0$.
-   - Ground truth empty and prediction non-empty: Dice = $0.0$, HD95 = $373.13$.
-   - Ground truth non-empty and prediction empty: Dice = $0.0$, HD95 = $373.13$.
-2. **`skip`**:
-   - Excludes volumes with empty ground truth from that channel's average using NaN-aware means.
-   - Reports valid case counts via `n_valid_tc`, `n_valid_wt`, and `n_valid_et`.
-
----
-
-## Model Profiling CLI (`scripts/profile_model.py`)
-
-Profile parameter counts, model memory footprint, forward+backward execution latency, and GPU headroom:
+### 1. One-Command Live Demonstration
+Launch the complete stack (FastAPI backend on `:8000`, Flower FL server on `:8080`, 3 Hospital nodes, and React UI on `:5173`):
 
 ```bash
-# Profile tiny smoke test configuration on CPU:
-python scripts/profile_model.py --config configs/smoke_test.yaml --device cpu
+# On Windows:
+scripts\run_demo.bat
 
-# Profile base configuration on CPU:
-python scripts/profile_model.py --config configs/base.yaml --device cpu
-
-# Profile on CUDA with mixed precision (AMP) and batch size sweep (1, 2, 4):
-python scripts/profile_model.py --config configs/base.yaml --device cuda --amp --sweep
+# On Linux / macOS / WSL:
+chmod +x scripts/run_demo.sh && ./scripts/run_demo.sh
 ```
 
-The script reports peak VRAM usage via `torch.cuda.max_memory_allocated` and outputs suitability recommendations for 8 GB and 12 GB GPU hardware budgets.
-
----
-
-## Setup & Testing
-
-### 1. Installation
+### 2. Run the Full Test Suite
+Execute the 117 test suite (CPU-friendly, completes in ~19s):
 ```bash
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-pip install -e .
+.\.venv\Scripts\pytest.exe tests/ -v
 ```
 
-### 2. Test Suite
-Run the full CPU-only test suite:
+### 3. Verify TLS Security
 ```bash
-pytest tests/ -v
+.\.venv\Scripts\python.exe tests/tls_check.py
 ```
-All unit and integration tests run deterministically without internet access or GPU dependencies.
+*Output: Verifies (a) correct CA connection succeeds, (b) plaintext connection is rejected, and (c) untrusted CA is rejected.*
+
+### 4. Verify Node Dropout Resilience
+```bash
+.\.venv\Scripts\python.exe scripts/simulate_dropout.py
+```
+*Output: Kills Hospital 2 during Round 2; verifies the round completes with 2/3 nodes and renormalized weights.*
+
+### 5. Verify Differential Privacy & Inversion Attack Resistance
+```bash
+.\.venv\Scripts\python.exe scripts/attack_demo.py
+```
+*Output: Proves adversarial gradient alignment drops from 1.0000 (plaintext) to -0.0097 (with DP).*
+
+### 6. React Monitoring Dashboard
+```bash
+cd dashboard
+npm install
+npm run dev
+# Open http://localhost:5173 in browser
+```
 
 ---
 
-## Centralized Baseline Training & Evaluation (Week 1)
+## Configuration Reference (`config.yaml`)
 
-FedMed includes a complete centralized training and evaluation pipeline producing benchmark segmentation performance on the BraTS multi-sequence dataset.
+Every component is governed by `config.yaml`:
 
-- **Guide & Runbook**: See [docs/baseline.md](docs/baseline.md) for full configuration reference, directory layout, CSV/JSON schemas, determinism notes, and Google Colab / Kaggle runbooks.
-- **Fast Smoke Test**:
-  ```bash
-  python scripts/train_baseline.py --config configs/smoke_test.yaml --smoke
-  ```
-- **Full Centralized Training**:
-  ```bash
-  python scripts/train_baseline.py --config configs/base.yaml --device cuda
-  ```
-- **Evaluation**:
-  ```bash
-  python scripts/evaluate.py --config configs/base.yaml --checkpoint <checkpoint_path> --split test --hd95
-  ```
+```yaml
+debug: true                     # Fast CPU mode (small model, 16x16 ROI, completes in <3 min)
 
+server:
+  address: "127.0.0.1:8080"
+  rounds: 3
+  min_fit_clients: 2            # Quorum threshold for dropout resilience
+  min_available_clients: 3
 
+hospitals:
+  - id: "hospital_1"
+    name: "General Hospital Scribe"
+    local_epochs: 1
+    lr: 0.0002
+  - id: "hospital_2"
+    name: "University Health Alliance"
+    local_epochs: 1
+    lr: 0.0002
+  - id: "hospital_3"
+    name: "Memorial Cancer Institute"
+    local_epochs: 1
+    lr: 0.0002
+
+model:
+  name: "monai_unet"
+  norm: "INSTANCE"              # InstanceNorm3d strictly required (BatchNorm banned)
+  in_channels: 4                # FLAIR, T1, T1ce, T2
+  out_channels: 3               # TC, WT, ET multi-label tumor compartments
+
+tls:
+  enabled: false                # Toggle mTLS encryption in transit
+
+he:
+  enabled: false                # Toggle TenSEAL CKKS homomorphic encryption
+  poly_modulus_degree: 8192
+  coeff_mod_bit_sizes: [60, 40, 40, 60]
+  scale_bits: 40
+
+dp:
+  enabled: false                # Toggle differential privacy
+  clip_norm: 1.0                # L2 sensitivity bound C
+  noise_multiplier: 1.0         # Gaussian noise multiplier sigma
+  delta: 1.0e-5
+```
 
 ---
 
-## Cross-Silo Data Partitioning (`fedmed.data.partition`)
+## Limitations & Engineering Simplifications
 
-FedMed features a patient-level data partitioning module for multi-hospital federated simulations:
+To maintain academic and professional integrity, the following simplifications in this implementation are explicitly documented:
 
-- **Patient-Level Isolation**: A patient's MRI scans exist strictly in one hospital silo or the global validation holdout. No patient is ever split across hospitals.
-- **Server Global Validation Set**: 15% (configurable) of patients are held out completely from all hospitals. The aggregation server uses this set exclusively to evaluate the global federated model.
-- **Baseline Test Split Preservation**: If a baseline `data/splits.json` exists, the global test set is preserved identically so federated results are directly comparable to centralized benchmarks.
-- **IID and Non-IID Partitioning**:
-  - `iid`: Shuffled patient cohort divided equally across the 3 hospitals.
-  - `non_iid`: Proportional cohort partitioning (e.g. 50% / 30% / 20%) simulating heterogeneous clinic capacities.
-- **Privacy-Preserving Manifest**: `partitions/partition_manifest.json` persists only string patient identifiers—never raw scans, labels, or filesystem paths.
-- **API**:
-  ```python
-  from fedmed.data.partition import create_or_load_partitions, get_hospital_loaders
+1. **Shared Homomorphic Encryption Secret Key:** In this research implementation, the 3 hospital silos share one CKKS secret key generated at setup. In a multi-institutional clinical production deployment, a **Threshold Homomorphic Encryption (TPKE)** or Multi-Party Key Generation (MP-CKKS) scheme would be deployed so that no individual hospital possesses the unilateral capability to decrypt model aggregates.
+2. **Client-Level DP in Small Cohorts:** With 3 hospital silos, client-level DP requires substantial noise ($\sigma \ge 1.0$) to provably obscure the presence of a hospital holding 20–50% of the dataset. For large hospital networks ($K \ge 100$), the noise penalty per silo drops dramatically.
+3. **Simulated Silos on a Single Host:** For reproducible execution and testing on a student workstation, the 3 hospital nodes run as isolated OS processes communicating over loopback gRPC sockets rather than separate physical data centers.
+4. **Research Software Status:** While engineered around HIPAA and GDPR data minimization requirements, this repository is an educational and scientific prototype and has not undergone FDA/CE software as a medical device (SaMD) validation.
 
-  # Generate or load partition manifest and display summary table:
-  manifest = create_or_load_partitions(cfg)
+---
 
-  # Retrieve MONAI train and local-val DataLoaders for a specific silo:
-  train_loader, val_loader = get_hospital_loaders("hospital_1", cfg)
-  ```
+## What I Would Do Next
+
+1. **Threshold CKKS (TPKE):** Implement collective key generation and distributed partial decryption using Lattigo or OpenFHE so decryption requires an authorized quorum of hospitals.
+2. **Personalized Federated Learning:** Integrate Dirichlet-based localized heads (e.g. FedPer, pFedMe) to allow hospitals to fine-tune specialized layers for local MRI scanner protocols.
+3. **Async Aggregation (FedBuff):** Support asynchronous updates for hospitals with slow or fluctuating network connections.
+4. **Medical Hardware Acceleration:** Benchmark GPU-accelerated CKKS operations via CUDA-enabled homomorphic encryption backends.
