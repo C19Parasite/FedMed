@@ -1,0 +1,56 @@
+{
+  "seed": 42,
+  "mode": "iid",
+  "num_hospitals": 3,
+  "global_val": [
+    "synthetic_004",
+    "synthetic_008"
+  ],
+  "global_test": [
+    "synthetic_001"
+  ],
+  "hospitals": {
+    "hospital_1": {
+      "patient_ids": [
+        "synthetic_003",
+        "synthetic_006",
+        "synthetic_009"
+      ],
+      "train_ids": [
+        "synthetic_003",
+        "synthetic_006"
+      ],
+      "val_ids": [
+        "synthetic_009"
+      ]
+    },
+    "hospital_2": {
+      "patient_ids": [
+        "synthetic_005",
+        "synthetic_007",
+        "synthetic_010"
+      ],
+      "train_ids": [
+        "synthetic_005",
+        "synthetic_007"
+      ],
+      "val_ids": [
+        "synthetic_010"
+      ]
+    },
+    "hospital_3": {
+      "patient_ids": [
+        "synthetic_000",
+        "synthetic_002",
+        "synthetic_011"
+      ],
+      "train_ids": [
+        "synthetic_000",
+        "synthetic_002"
+      ],
+      "val_ids": [
+        "synthetic_011"
+      ]
+    }
+  }
+}
