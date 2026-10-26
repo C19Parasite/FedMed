@@ -1,8 +1,7 @@
 [
   {
-    "id": "demo_case_1",
-    "label": "Public BraTS Demo Case #1",
-    "dataset_note": "Research cohort test case (zero private hospital patient data)",
+    "id": "case_0132",
+    "label": "BraTS Case 0132",
     "depth_slices": 32,
     "dice": {
       "dice_tc": 0.0215,
@@ -11,10 +10,44 @@
       "dice_mean": 0.0213
     },
     "centralized_dice": {
+      "dice_tc": 0.0222,
+      "dice_wt": 0.0419,
+      "dice_et": 0.0127,
+      "dice_mean": 0.0256
+    }
+  },
+  {
+    "id": "case_0245",
+    "label": "BraTS Case 0245",
+    "depth_slices": 32,
+    "dice": {
       "dice_tc": 0.022,
-      "dice_wt": 0.0287,
-      "dice_et": 0.0134,
-      "dice_mean": 0.0214
+      "dice_wt": 0.0312,
+      "dice_et": 0.014,
+      "dice_mean": 0.0224
+    },
+    "centralized_dice": {
+      "dice_tc": 0.0214,
+      "dice_wt": 0.0363,
+      "dice_et": 0.0126,
+      "dice_mean": 0.0234
+    }
+  },
+  {
+    "id": "case_0389",
+    "label": "BraTS Case 0389",
+    "depth_slices": 32,
+    "dice": {
+      "dice_tc": 0.0221,
+      "dice_wt": 0.0325,
+      "dice_et": 0.0135,
+      "dice_mean": 0.0227
+    },
+    "centralized_dice": {
+      "dice_tc": 0.0197,
+      "dice_wt": 0.0333,
+      "dice_et": 0.0116,
+      "dice_mean": 0.0215
     }
   }
 ]

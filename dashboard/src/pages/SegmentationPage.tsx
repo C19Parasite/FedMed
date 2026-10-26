@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Scan, Eye, Layers, ShieldCheck, Sliders, CheckCircle2 } from 'lucide-react';
 import { useDashboardStore } from '../store/useDashboardStore';
 import { SegmentationCase } from '../types';
+import { MRIViewport } from '../components/MRIViewport';
 
 export const SegmentationPage: React.FC = () => {
   const { cases, openModal } = useDashboardStore();
@@ -79,44 +80,30 @@ export const SegmentationPage: React.FC = () => {
           {/* Viewports Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Ground Truth */}
-            <div>
-              <div className="flex justify-between text-xs font-bold text-zinc-600 dark:text-zinc-300 mb-1.5">
-                <span>Ground Truth Mask</span>
-                <span className="font-mono text-zinc-400">Axial Z: {sliceZ}</span>
-              </div>
-              <div className="relative aspect-square bg-[#07090E] rounded-2xl overflow-hidden border border-zinc-800 flex items-center justify-center">
-                <div className="absolute inset-4 rounded-full bg-gradient-to-tr from-zinc-800 via-zinc-700 to-zinc-900 opacity-80" />
-                <div className="absolute w-40 h-48 rounded-full bg-zinc-600/30 blur-[2px]" />
-                <div
-                  className="absolute w-22 h-22 rounded-full border-2 border-mint-400 bg-mint-500/35 transform translate-x-3 -translate-y-2 transition-opacity"
-                  style={{ opacity: maskOpacity }}
-                />
-                <div
-                  className="absolute w-12 h-12 rounded-full border border-amber-400 bg-amber-500/40 transform translate-x-4 -translate-y-1 transition-opacity"
-                  style={{ opacity: maskOpacity }}
-                />
-              </div>
-            </div>
+            <MRIViewport
+              caseId={selectedCase.id}
+              sliceIndex={Math.max(0, Math.min(31, sliceZ - 1))}
+              maskType="gt"
+              title="Ground Truth Mask"
+              badge={<span className="font-mono text-zinc-400">Axial Z: {sliceZ}</span>}
+              maskOpacity={maskOpacity}
+              modality={activeModality}
+            />
 
             {/* Federated Prediction */}
-            <div>
-              <div className="flex justify-between text-xs font-bold text-lavender-700 dark:text-lavender-400 mb-1.5">
-                <span>FedMed Prediction</span>
-                <span className="font-mono text-mint-600 font-bold">Dice: {(selectedCase.diceMean * 100).toFixed(1)}%</span>
-              </div>
-              <div className="relative aspect-square bg-[#07090E] rounded-2xl overflow-hidden border border-lavender-400/40 flex items-center justify-center">
-                <div className="absolute inset-4 rounded-full bg-gradient-to-tr from-zinc-800 via-zinc-700 to-zinc-900 opacity-80" />
-                <div className="absolute w-40 h-48 rounded-full bg-zinc-600/30 blur-[2px]" />
-                <div
-                  className="absolute w-21 h-21 rounded-full border-2 border-mint-400 bg-mint-500/40 transform translate-x-3 -translate-y-2 transition-opacity shadow-glow-mint"
-                  style={{ opacity: maskOpacity }}
-                />
-                <div
-                  className="absolute w-11 h-11 rounded-full border border-amber-400 bg-amber-500/45 transform translate-x-4 -translate-y-1 transition-opacity"
-                  style={{ opacity: maskOpacity }}
-                />
-              </div>
-            </div>
+            <MRIViewport
+              caseId={selectedCase.id}
+              sliceIndex={Math.max(0, Math.min(31, sliceZ - 1))}
+              maskType="pred"
+              title="FedMed Prediction"
+              badge={
+                <span className="font-mono text-mint-600 font-bold tabular-nums">
+                  Dice: {(selectedCase.diceMean * 100).toFixed(1)}%
+                </span>
+              }
+              maskOpacity={maskOpacity}
+              modality={activeModality}
+            />
           </div>
 
           {/* Sliders */}

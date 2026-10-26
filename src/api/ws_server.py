@@ -157,15 +157,31 @@ async def get_cases() -> List[Dict[str, Any]]:
 async def get_slice_image(
     case_id: str,
     z: int,
-    view: str = Query("overlay", regex="^(mri|gt|pred|central|overlay)$"),
+    view: str = Query("mri", regex="^(mri|gt|pred|central|overlay|gt_wt|gt_tc|gt_et|pred_wt|pred_tc|pred_et)$"),
+    modality: Optional[str] = Query(None),
 ) -> FileResponse:
     """Serve individual slice PNG image for demo case visualization."""
-    case_dir = Path("results/demo_cases") / case_id
-    if not case_dir.exists():
+    case_dirs = [
+        Path("results/demo_cases") / case_id,
+        Path("dashboard/public/cases") / case_id,
+        Path("results/demo_cases") / f"demo_case_{case_id.replace('case_', '')}",
+    ]
+
+    target_dir = None
+    for cd in case_dirs:
+        if cd.exists():
+            target_dir = cd
+            break
+
+    if not target_dir:
         raise HTTPException(status_code=404, detail="Case not found")
 
-    file_name = f"slice_{z}_{view}.png"
-    img_path = case_dir / file_name
+    if view == "mri" and modality and (target_dir / f"slice_{z}_mri_{modality.lower()}.png").exists():
+        file_name = f"slice_{z}_mri_{modality.lower()}.png"
+    else:
+        file_name = f"slice_{z}_{view}.png"
+
+    img_path = target_dir / file_name
     if not img_path.exists():
         raise HTTPException(status_code=404, detail=f"Slice {z} view {view} not found")
 

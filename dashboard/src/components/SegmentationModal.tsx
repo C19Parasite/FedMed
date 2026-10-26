@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { X, Layers, Sliders, ShieldCheck, Eye, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { useDashboardStore } from '../store/useDashboardStore';
 import { BlurImage } from './BlurImage';
+import { MRIViewport } from './MRIViewport';
 
 export const SegmentationModal: React.FC = () => {
   const { isModalOpen, activeModalCase, closeModal, cases, openModal } = useDashboardStore();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [plane, setPlane] = useState<'axial' | 'sagittal' | 'coronal'>('axial');
   const [sliceZ, setSliceZ] = useState<number>(16);
@@ -14,48 +17,47 @@ export const SegmentationModal: React.FC = () => {
   const [showTC, setShowTC] = useState<boolean>(true);
   const [showET, setShowET] = useState<boolean>(true);
 
-  // 12. Predictive back: Sync modal state to URL query parameter (?case=...)
+  // Sync from URL parameter (?case=case_0132) into modal state
+  const caseFromUrl = searchParams.get('case');
   useEffect(() => {
-    if (activeModalCase && isModalOpen) {
-      const url = new URL(window.location.href);
-      url.searchParams.set('case', activeModalCase.id);
-      window.history.pushState({ modalOpen: true, caseId: activeModalCase.id }, '', url.toString());
-
-      const handlePopState = () => {
-        closeModal();
-      };
-
-      window.addEventListener('popstate', handlePopState);
-      return () => {
-        window.removeEventListener('popstate', handlePopState);
-      };
-    } else {
-      const url = new URL(window.location.href);
-      if (url.searchParams.has('case')) {
-        url.searchParams.delete('case');
-        window.history.replaceState({}, '', url.toString());
-      }
-    }
-  }, [activeModalCase, isModalOpen, closeModal]);
-
-  // Handle URL deep-link on mount
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    const caseId = url.searchParams.get('case');
-    if (caseId && !isModalOpen) {
-      const found = cases.find((c) => c.id === caseId);
-      if (found) {
+    if (caseFromUrl) {
+      const found = cases.find((c) => c.id === caseFromUrl);
+      if (found && (!isModalOpen || activeModalCase?.id !== found.id)) {
         openModal(found);
       }
     }
-  }, [cases, isModalOpen, openModal]);
+  }, [caseFromUrl, cases, isModalOpen, activeModalCase, openModal]);
+
+  // Sync from modal state into URL parameter
+  useEffect(() => {
+    if (isModalOpen && activeModalCase) {
+      if (searchParams.get('case') !== activeModalCase.id) {
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev);
+          next.set('case', activeModalCase.id);
+          return next;
+        });
+      }
+    }
+  }, [isModalOpen, activeModalCase, searchParams, setSearchParams]);
+
+  const handleClose = () => {
+    closeModal();
+    if (searchParams.has('case')) {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('case');
+        return next;
+      });
+    }
+  };
 
   if (!isModalOpen || !activeModalCase) return null;
 
   // 10. Swipe-to-dismiss bottom sheet handler on mobile
   const handleDragEnd = (_e: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     if (info.offset.y > 140 || info.velocity.y > 500) {
-      closeModal();
+      handleClose();
     }
   };
 
@@ -63,7 +65,7 @@ export const SegmentationModal: React.FC = () => {
     <AnimatePresence>
       <div
         className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-black/60 backdrop-blur-sm"
-        onClick={closeModal}
+        onClick={handleClose}
       >
         <motion.div
           initial={{ opacity: 0, y: 80, scale: 0.98 }}
@@ -104,7 +106,7 @@ export const SegmentationModal: React.FC = () => {
             </div>
 
             <button
-              onClick={closeModal}
+              onClick={handleClose}
               className="w-9 h-9 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-400 hover:text-zinc-700 dark:hover:text-white flex items-center justify-center transition-colors hit-slop"
               aria-label="Close Modal"
             >
@@ -178,93 +180,36 @@ export const SegmentationModal: React.FC = () => {
             {/* Side-by-Side Viewport: Ground Truth vs Federated Prediction */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Left Viewport: Ground Truth */}
-              <div className="flex flex-col items-center">
-                <div className="w-full flex items-center justify-between mb-2 px-1">
-                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-200 uppercase tracking-wider">
-                    Neuroradiologist Ground Truth
-                  </span>
-                  <span className="text-[11px] font-mono text-zinc-400">Manual Contours</span>
-                </div>
-
-                <div className="relative w-full aspect-square bg-[#06080D] rounded-3xl overflow-hidden border border-zinc-800 shadow-inner flex items-center justify-center">
-                  {/* Simulated Brain Slice Anatomy with BlurHash Placeholder */}
-                  {activeModalCase.blurHash && (
-                    <BlurImage
-                      blurPlaceholder={activeModalCase.blurHash}
-                      alt="Brain MRI Anatomy"
-                      containerClassName="absolute inset-0 w-full h-full"
-                    />
-                  )}
-                  <div className="absolute inset-4 rounded-full bg-gradient-to-tr from-zinc-800 via-zinc-700 to-zinc-900 opacity-80" />
-                  <div className="absolute w-44 h-52 rounded-full bg-zinc-600/30 blur-[2px]" />
-
-                  {/* Ground Truth Contours */}
-                  {showWT && (
-                    <div
-                      className="absolute w-24 h-24 rounded-full border-2 border-mint-400 bg-mint-500/30 transform translate-x-4 -translate-y-2 transition-opacity"
-                      style={{ opacity: maskOpacity }}
-                    />
-                  )}
-                  {showTC && (
-                    <div
-                      className="absolute w-14 h-14 rounded-full border-2 border-amber-400 bg-amber-500/35 transform translate-x-5 -translate-y-1 transition-opacity"
-                      style={{ opacity: maskOpacity }}
-                    />
-                  )}
-                  {showET && (
-                    <div
-                      className="absolute w-8 h-8 rounded-full border border-coral-400 bg-coral-500/50 transform translate-x-6 -translate-y-0.5 transition-opacity"
-                      style={{ opacity: maskOpacity }}
-                    />
-                  )}
-
-                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/60 text-[10px] font-mono text-zinc-300">
-                    GT {plane.toUpperCase()} #{sliceZ}
-                  </div>
-                </div>
-              </div>
+              <MRIViewport
+                caseId={activeModalCase.id}
+                sliceIndex={Math.max(0, Math.min(31, sliceZ - 1))}
+                maskType="gt"
+                title="Neuroradiologist Ground Truth"
+                badge={<span className="text-[11px] font-mono text-zinc-400">Manual Contours</span>}
+                showWT={showWT}
+                showTC={showTC}
+                showET={showET}
+                maskOpacity={maskOpacity}
+                plane={plane.toUpperCase()}
+              />
 
               {/* Right Viewport: Federated Prediction */}
-              <div className="flex flex-col items-center">
-                <div className="w-full flex items-center justify-between mb-2 px-1">
-                  <span className="text-xs font-bold text-lavender-700 dark:text-lavender-400 uppercase tracking-wider">
-                    FedMed 3D U-Net Output
-                  </span>
+              <MRIViewport
+                caseId={activeModalCase.id}
+                sliceIndex={Math.max(0, Math.min(31, sliceZ - 1))}
+                maskType="pred"
+                title="FedMed 3D U-Net Output"
+                badge={
                   <span className="text-[11px] font-mono text-mint-600 font-bold tabular-nums">
                     Dice: {(activeModalCase.diceMean * 100).toFixed(1)}%
                   </span>
-                </div>
-
-                <div className="relative w-full aspect-square bg-[#06080D] rounded-3xl overflow-hidden border border-lavender-400/40 shadow-inner flex items-center justify-center">
-                  {/* Simulated Brain Slice Anatomy */}
-                  <div className="absolute inset-4 rounded-full bg-gradient-to-tr from-zinc-800 via-zinc-700 to-zinc-900 opacity-80" />
-                  <div className="absolute w-44 h-52 rounded-full bg-zinc-600/30 blur-[2px]" />
-
-                  {/* Federated Model Output Contours */}
-                  {showWT && (
-                    <div
-                      className="absolute w-23 h-23 rounded-full border-2 border-mint-400 bg-mint-500/35 transform translate-x-4 -translate-y-2 transition-opacity shadow-glow-mint"
-                      style={{ opacity: maskOpacity }}
-                    />
-                  )}
-                  {showTC && (
-                    <div
-                      className="absolute w-13 h-13 rounded-full border-2 border-amber-400 bg-amber-500/40 transform translate-x-5 -translate-y-1 transition-opacity"
-                      style={{ opacity: maskOpacity }}
-                    />
-                  )}
-                  {showET && (
-                    <div
-                      className="absolute w-7 h-7 rounded-full border border-coral-400 bg-coral-500/55 transform translate-x-6 -translate-y-0.5 transition-opacity"
-                      style={{ opacity: maskOpacity }}
-                    />
-                  )}
-
-                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-lavender-900/70 text-[10px] font-mono text-lavender-200">
-                    PRED {plane.toUpperCase()} #{sliceZ}
-                  </div>
-                </div>
-              </div>
+                }
+                showWT={showWT}
+                showTC={showTC}
+                showET={showET}
+                maskOpacity={maskOpacity}
+                plane={plane.toUpperCase()}
+              />
             </div>
 
             {/* Sliders Controls Row */}
