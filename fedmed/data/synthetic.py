@@ -50,12 +50,17 @@ def generate_synthetic_dataset(
             rng, depth, height, width, label_scheme=label_scheme
         )
         if layout == "msd":
-            _save_nifti(case_dir / "image.nii.gz", image)
-            _save_nifti(case_dir / "label.nii.gz", label)
+            img_p = case_dir / "image.nii.gz"
+            lbl_p = case_dir / "label.nii.gz"
+            if not (img_p.exists() and lbl_p.exists() and img_p.stat().st_size > 100):
+                _save_nifti(img_p, image)
+                _save_nifti(lbl_p, label)
         else:
-            for channel, name in enumerate(("t1", "t1ce", "t2", "flair")):
-                _save_nifti(case_dir / f"{patient_id}_{name}.nii.gz", image[channel])
-            _save_nifti(case_dir / f"{patient_id}_seg.nii.gz", label)
+            seg_p = case_dir / f"{patient_id}_seg.nii.gz"
+            if not (seg_p.exists() and seg_p.stat().st_size > 100):
+                for channel, name in enumerate(("t1", "t1ce", "t2", "flair")):
+                    _save_nifti(case_dir / f"{patient_id}_{name}.nii.gz", image[channel])
+                _save_nifti(seg_p, label)
         ids.append(patient_id)
     logger.info(
         "wrote synthetic dataset n_patients=%s layout=%s seed=%s",
