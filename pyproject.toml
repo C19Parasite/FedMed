@@ -27,7 +27,7 @@ dependencies = [
 dev = ["pytest"]
 
 [tool.setuptools.packages.find]
-include = ["fedmed*"]
+include = ["fedmed*", "src*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
