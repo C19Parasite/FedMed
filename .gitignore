@@ -50,6 +50,20 @@ build/
 .cache/
 .monai/
 
+# IDE and editor configuration
+.cursor/
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Temporary and scratch artifacts
+temp_chrome/
+*.tmp
+*.log
+/results/test_metrics.json
+/results/baseline_metrics.json
+
 # TLS / SSL Certificates, Private Keys, and Credentials (Rule 5)
 /certificates/
 /certs/
