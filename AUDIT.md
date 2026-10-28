@@ -30,6 +30,7 @@
 | **Phase 9** | Segmentation Results | Public BraTS demo slice overlays (MRI, GT, Fed Pred, Central Pred, Overlay) | **COMPLETE** | `scripts/generate_demo_cases.py` (PASS: 32 slices generated), `results/demo_cases/manifest.json`. |
 | **Phase 10** | React Dashboard | React + Vite + Recharts frontend (curves, overhead, ablation, viewer, resilience) | **COMPLETE** | `cd dashboard && npm run build` (PASS: built in 2.73s, zero errors). |
 | **Phase 11** | Integration & Review Pack | `run_demo.bat` / `.sh`, comprehensive README, 18-question `REVIEW_QA.md` | **COMPLETE** | `scripts/run_demo.bat`, `docs/REVIEW_QA.md`, full `README.md`. |
+| **Phase 12** | Repo Hygiene & GitHub Release Hardening | Remove `.cursor` rules & temp scripts, package config, Apache 2.0 license, full docs | **COMPLETE** | Removed `.cursor/` & `dashboard/verify_fixes.cjs`, updated `.gitignore`, Apache 2.0 license, 117 tests passing. |
 
 ---
 
